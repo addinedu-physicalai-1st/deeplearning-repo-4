@@ -14,9 +14,9 @@
 
 **작업 내용**:
 
-- [ ] conda 가상환경 생성 및 활성화
-- [ ] `requirements.txt` 작성 (Mediapipe, PyAutoGui, PyQT6, TensorFlow/Keras, numpy, opencv-python 등)
-- [ ] 프로젝트 디렉토리 구조 생성:
+- [x] conda 가상환경 생성 및 활성화
+- [x] `requirements.txt` 작성 (Mediapipe, PyAutoGui, PyQT6, TensorFlow/Keras, numpy, opencv-python 등)
+- [x] 프로젝트 디렉토리 구조 생성:
   ```
   gesto/
   ├── src/
@@ -32,8 +32,8 @@
   └── requirements.txt
   ```
 
-- [ ] 기본 설정 파일 생성 (config.py)
-- [ ] `.gitignore` 업데이트 (Python, 모델 파일, 데이터 파일 등)
+- [x] 기본 설정 파일 생성 (config.py)
+- [x] `.gitignore` 업데이트 (Python, 모델 파일, 데이터 파일 등)
 
 **산출물**:
 
@@ -49,23 +49,23 @@
 
 **작업 내용**:
 
-- [ ] `src/ui/main_window.py` 구현
-  - [ ] 메인 윈도우 클래스 생성
-  - [ ] 기본 레이아웃 설계 (QHBoxLayout, QVBoxLayout)
-  - [ ] 웹캠 영상 표시 영역 (QLabel 또는 QGraphicsView) - 더미 이미지로 초기화
-  - [ ] 제스처 인식 상태 표시 영역 (QLabel)
-  - [ ] 모드 선택 버튼 (PPT/유투브) - QRadioButton 또는 QPushButton
-  - [ ] 시작/종료 버튼 (QPushButton) - 클릭 이벤트 핸들러 (더미 함수)
-  - [ ] **감도 설정 슬라이드 (QSlider)** - 제스처 인식 민감도 조절 (0-100%)
-  - [ ] 감도 값 표시 레이블 (QLabel)
-  - [ ] 상태바 (QStatusBar)
-- [ ] `src/ui/gesture_display.py` 구현 (기본 구조)
-  - [ ] 제스처 표시 위젯 클래스
-  - [ ] 레이아웃 준비
-- [ ] `main.py` 구현
-  - [ ] PyQT6 애플리케이션 초기화
-  - [ ] 메인 윈도우 표시
-  - [ ] 이벤트 루프 실행
+- [x] `src/ui/main_window.py` 구현
+  - [x] 메인 윈도우 클래스 생성
+  - [x] 기본 레이아웃 설계 (QHBoxLayout, QVBoxLayout)
+  - [x] 웹캠 영상 표시 영역 (QLabel 또는 QGraphicsView) - 더미 이미지로 초기화
+  - [x] 제스처 인식 상태 표시 영역 (QLabel)
+  - [x] 모드 선택 버튼 (PPT/유투브) - QRadioButton 또는 QPushButton
+  - [x] 시작/종료 버튼 (QPushButton) - 클릭 이벤트 핸들러 (더미 함수)
+  - [x] **감도 설정 슬라이드 (QSlider)** - 제스처 인식 민감도 조절 (0-100%)
+  - [x] 감도 값 표시 레이블 (QLabel)
+  - [x] 상태바 (QStatusBar)
+- [x] `src/ui/gesture_display.py` 구현 (기본 구조)
+  - [x] 제스처 표시 위젯 클래스
+  - [x] 레이아웃 준비
+- [x] `main.py` 구현
+  - [x] PyQT6 애플리케이션 초기화
+  - [x] 메인 윈도우 표시
+  - [x] 이벤트 루프 실행
 
 **산출물**:
 

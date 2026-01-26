@@ -1,0 +1,63 @@
+"""
+Gesto 프로젝트 설정 파일
+"""
+
+# 애플리케이션 정보
+APP_NAME = "Gesto"
+APP_VERSION = "1.0.0"
+APP_DESCRIPTION = "Hands-Free Presentation Control"
+
+# 경로 설정
+ASSETS_DIR = "assets"
+MODELS_DIR = "models"
+DATA_DIR = "data"
+
+# 웹캠 설정
+CAMERA_INDEX = 0
+CAMERA_WIDTH = 640
+CAMERA_HEIGHT = 480
+CAMERA_FPS = 30
+
+# 제스처 인식 설정
+GESTURE_DETECTION_FPS = 30
+GESTURE_SEQUENCE_LENGTH = 30  # LSTM 입력 시퀀스 길이
+GESTURE_CONFIDENCE_THRESHOLD = 0.7  # 기본 신뢰도 임계값
+
+# 감도 설정 (0-100)
+SENSITIVITY_DEFAULT = 50
+SENSITIVITY_MIN = 0
+SENSITIVITY_MAX = 100
+
+# UI 설정
+WINDOW_WIDTH = 1200
+WINDOW_HEIGHT = 800
+WINDOW_TITLE = f"{APP_NAME} - {APP_DESCRIPTION}"
+
+# 색상 테마 (로고 기반 블루 테마)
+COLOR_PRIMARY = "#1E3A5F"  # 진한 네이비 블루
+COLOR_SECONDARY = "#4A90E2"  # 밝은 블루
+COLOR_ACCENT = "#6BB6FF"  # 라이트 블루
+COLOR_BACKGROUND = "#FFFFFF"  # 흰색
+COLOR_TEXT_PRIMARY = "#1E3A5F"  # 진한 블루
+COLOR_TEXT_SECONDARY = "#6B7280"  # 회색
+COLOR_BUTTON_HOVER = "#3B82F6"  # 호버 블루
+
+# 제스처 클래스 정의
+GESTURE_CLASSES = {
+    "COMMON": {
+        "START": 0,
+        "STOP": 1,
+    },
+    "PPT": {
+        "NEXT": 2,
+        "PREV": 3,
+        "SHOW_START": 4,
+    },
+    "YOUTUBE": {
+        "PLAY_PAUSE": 5,
+        "VOLUME_UP": 6,
+        "VOLUME_DOWN": 7,
+        "MUTE": 8,
+        "FULLSCREEN": 9,
+    }
+}

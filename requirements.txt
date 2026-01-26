@@ -1,0 +1,13 @@
+# Core dependencies
+mediapipe>=0.10.0
+pyautogui>=0.9.54
+PyQt6>=6.6.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+
+# Machine Learning
+tensorflow>=2.13.0
+keras>=2.13.0
+
+# Utilities
+Pillow>=10.0.0

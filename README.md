@@ -29,6 +29,8 @@
 # conda 로 gesto 가상환경 만들기
 conda create -n gesto python=3.10
 conda activate gesto
+
+pip install -r requirements.txt
 ```
 
 ## 기여자
