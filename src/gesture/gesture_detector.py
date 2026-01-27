@@ -1,117 +1,222 @@
 """
-제스처 인식 프로토타입 모듈
-확장 가능한 구조로 설계하여 다양한 모션 인식 방법을 실험할 수 있도록 함
+통합 제스처 인식 모듈
+레지스트리 기반으로 정적/동적 제스처를 모두 지원하는 통합 인식기
 """
 
 import numpy as np
+from collections import deque
 from typing import Optional, List, Dict
-from enum import Enum
+import sys
+import os
 
+# 프로젝트 루트를 경로에 추가
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-class GestureType(Enum):
-    """제스처 타입"""
-    NONE = "NONE"
-    START = "START"
-    STOP = "STOP"
+from src.gesture.registry.gesture_registry import GestureRegistry
+from src.gesture.recognizers.rule_based_recognizer import RuleBasedRecognizer
+from src.gesture.recognizers.lstm_recognizer import LSTMRecognizer
 
 
 class GestureDetector:
-    """제스처 인식 프로토타입 클래스
+    """통합 제스처 인식기
     
-    현재는 간단한 규칙 기반 인식을 구현하지만,
-    나중에 LSTM 모델이나 다른 방법으로 쉽게 교체할 수 있도록 설계됨
+    레지스트리 기반으로 정적/동적 제스처를 모두 지원합니다.
+    규칙 기반 및 LSTM 기반 인식을 모두 지원합니다.
     """
     
-    def __init__(self):
-        """제스처 인식기 초기화"""
-        self.current_state = GestureType.NONE
-        self.detection_threshold = 0.5  # 기본 임계값
+    def __init__(self, mode: str = "COMMON", recognition_method: str = "rule"):
+        """
+        제스처 인식기 초기화
+        
+        Args:
+            mode: 현재 모드 ("COMMON", "PPT", "YOUTUBE")
+            recognition_method: 인식 방법 ("rule", "lstm", "auto")
+                              "auto"면 제스처별 기본 방법 사용
+        """
+        self.mode = mode
+        self.recognition_method = recognition_method
+        self.detection_threshold = 0.7  # 기본 임계값
+        
+        # 레지스트리 및 인식기 초기화
+        self.registry = GestureRegistry()
+        self.rule_recognizer = RuleBasedRecognizer()
+        self.lstm_recognizer = LSTMRecognizer()  # TODO: 모델 경로 설정
+        
+        # 동적 제스처용 시퀀스 버퍼
+        self.sequence_buffers: Dict[str, deque] = {}
     
     def detect(self, landmarks_list: Optional[List]) -> str:
         """
-        랜드마크에서 제스처 인식
+        랜드마크에서 제스처 인식 (정적/동적 자동 분기)
         
         Args:
             landmarks_list: 손 랜드마크 리스트 (각 손마다 하나의 리스트)
                            각 리스트는 21개의 랜드마크 포인트를 포함
         
         Returns:
-            str: 인식된 제스처 ("START", "STOP", "NONE")
+            str: 인식된 제스처 이름 (인식되지 않으면 "NONE")
         """
         if landmarks_list is None or len(landmarks_list) == 0:
-            return GestureType.NONE.value
+            return "NONE"
         
         # 첫 번째 손만 사용 (나중에 양손 지원 가능)
         landmarks = landmarks_list[0]
         
         if len(landmarks) < 21:
-            return GestureType.NONE.value
+            return "NONE"
         
-        # 간단한 규칙 기반 제스처 인식
-        # TODO: 팀원들이 다양한 모션을 실험할 수 있도록 이 부분을 수정
-        gesture = self._detect_simple_gesture(landmarks)
+        # 현재 모드의 제스처 목록 조회
+        gesture_names = self.registry.get_gestures_by_mode(self.mode)
         
-        return gesture
+        # 정적 제스처 먼저 인식
+        for gesture_name in gesture_names:
+            gesture = self.registry.get_gesture(gesture_name)
+            if gesture is None:
+                continue
+            
+            # 정적 제스처 인식
+            if gesture.get_gesture_type() == "static":
+                result = self._detect_static_gesture(gesture, landmarks)
+                if result != "NONE":
+                    return result
+        
+        # 동적 제스처는 시퀀스 버퍼에 추가하고 인식
+        for gesture_name in gesture_names:
+            gesture = self.registry.get_gesture(gesture_name)
+            if gesture is None:
+                continue
+            
+            # 동적 제스처 인식
+            if gesture.get_gesture_type() == "dynamic":
+                result = self._detect_dynamic_gesture(gesture, landmarks)
+                if result != "NONE":
+                    return result
+        
+        return "NONE"
     
-    def _detect_simple_gesture(self, landmarks: List[Dict]) -> str:
+    def _detect_static_gesture(self, gesture, landmarks: List[Dict]) -> str:
         """
-        간단한 규칙 기반 제스처 인식 (프로토타입)
+        정적 제스처 인식
         
-        현재 구현:
-        - 주먹 (손가락이 모두 접힌 상태) → STOP
-        - 손 펴기 (손가락이 모두 펴진 상태) → START
+        Args:
+            gesture: 제스처 인스턴스
+            landmarks: 21개의 랜드마크 포인트 리스트
+        
+        Returns:
+            str: 인식된 제스처 이름
+        """
+        # 인식 방법 결정
+        method = self._get_recognition_method(gesture)
+        
+        if method == "rule":
+            return self.rule_recognizer.detect_static(gesture, landmarks)
+        elif method == "lstm" and self.lstm_recognizer:
+            return self.lstm_recognizer.detect_static(gesture, landmarks)
+        
+        return "NONE"
+    
+    def _detect_dynamic_gesture(self, gesture, landmarks: List[Dict]) -> str:
+        """
+        동적 제스처 인식 (시퀀스 기반)
+        
+        Args:
+            gesture: 제스처 인스턴스
+            landmarks: 21개의 랜드마크 포인트 리스트
+        
+        Returns:
+            str: 인식된 제스처 이름
+        """
+        gesture_name = gesture.get_name()
+        
+        # 시퀀스 버퍼 초기화
+        if gesture_name not in self.sequence_buffers:
+            sequence_length = getattr(gesture, 'sequence_length', 30)
+            self.sequence_buffers[gesture_name] = deque(maxlen=sequence_length)
+        
+        # 랜드마크를 벡터로 변환하여 버퍼에 추가
+        landmark_vector = self._landmarks_to_vector(landmarks)
+        self.sequence_buffers[gesture_name].append(landmark_vector)
+        
+        # 버퍼가 충분히 채워지지 않았으면 NONE 반환
+        if len(self.sequence_buffers[gesture_name]) < self.sequence_buffers[gesture_name].maxlen:
+            return "NONE"
+        
+        # 시퀀스 배열 생성
+        sequence = np.array(list(self.sequence_buffers[gesture_name]))
+        
+        # 인식 방법 결정
+        method = self._get_recognition_method(gesture)
+        
+        if method == "rule":
+            return self.rule_recognizer.detect_dynamic(gesture, sequence)
+        elif method == "lstm" and self.lstm_recognizer:
+            return self.lstm_recognizer.detect_dynamic(gesture, sequence)
+        
+        return "NONE"
+    
+    def _landmarks_to_vector(self, landmarks: List[Dict]) -> np.ndarray:
+        """
+        랜드마크를 벡터로 변환
         
         Args:
             landmarks: 21개의 랜드마크 포인트 리스트
         
         Returns:
-            str: 인식된 제스처
+            np.ndarray: 랜드마크 벡터 (63차원: 21개 포인트 × 3차원)
         """
-        # 손가락 끝 포인트 인덱스 (Mediapipe Hands)
-        # 엄지: 4, 검지: 8, 중지: 12, 약지: 16, 새끼: 20
-        finger_tips = [4, 8, 12, 16, 20]
-        # 손가락 관절 포인트 인덱스 (손가락이 접혔는지 판단)
-        finger_pips = [3, 6, 10, 14, 18]  # 각 손가락의 PIP 관절
+        vector = []
+        for landmark in landmarks:
+            vector.extend([landmark['x'], landmark['y'], landmark['z']])
+        return np.array(vector)
+    
+    def _get_recognition_method(self, gesture) -> str:
+        """
+        제스처별 인식 방법 결정
         
-        fingers_up = []
+        Args:
+            gesture: 제스처 인스턴스
         
-        # 엄지 처리 (x 좌표로 판단)
-        if landmarks[4]['x'] > landmarks[3]['x']:
-            fingers_up.append(1)
-        else:
-            fingers_up.append(0)
+        Returns:
+            str: 인식 방법 ("rule" 또는 "lstm")
+        """
+        if self.recognition_method != "auto":
+            return self.recognition_method
         
-        # 나머지 손가락 처리 (y 좌표로 판단)
-        for i in range(1, 5):
-            tip_idx = finger_tips[i]
-            pip_idx = finger_pips[i]
-            if landmarks[tip_idx]['y'] < landmarks[pip_idx]['y']:
-                fingers_up.append(1)
-            else:
-                fingers_up.append(0)
+        # 제스처별 기본 방법 사용 (현재는 모두 규칙 기반)
+        # TODO: 제스처 메타데이터에서 기본 방법 읽기
+        return "rule"
+    
+    def set_mode(self, mode: str):
+        """
+        모드 설정
         
-        total_fingers = sum(fingers_up)
-        
-        # 제스처 판단
-        if total_fingers == 0:
-            # 주먹 → STOP
-            return GestureType.STOP.value
-        elif total_fingers >= 4:
-            # 손 펴기 → START
-            return GestureType.START.value
-        else:
-            # 기타 → NONE
-            return GestureType.NONE.value
+        Args:
+            mode: 모드 이름 ("COMMON", "PPT", "YOUTUBE")
+        """
+        if mode in ["COMMON", "PPT", "YOUTUBE"]:
+            self.mode = mode
+            # 모드 변경 시 시퀀스 버퍼 초기화
+            self.sequence_buffers.clear()
     
     def set_threshold(self, threshold: float):
         """
-        인식 임계값 설정 (감도 조절용, 현재는 미사용)
+        인식 임계값 설정 (감도 조절용)
         
         Args:
             threshold: 임계값 (0.0 - 1.0)
         """
         self.detection_threshold = max(0.0, min(1.0, threshold))
     
+    def set_recognition_method(self, method: str):
+        """
+        인식 방법 설정
+        
+        Args:
+            method: 인식 방법 ("rule", "lstm", "auto")
+        """
+        if method in ["rule", "lstm", "auto"]:
+            self.recognition_method = method
+    
     def reset(self):
         """상태 초기화"""
-        self.current_state = GestureType.NONE
+        self.sequence_buffers.clear()

@@ -18,31 +18,41 @@ from src.utils.camera import Camera, frame_to_qpixmap
 from src.gesture.mediapipe_handler import MediapipeHandler
 from src.gesture.gesture_detector import GestureDetector
 
+# 제스처 클래스들을 import하여 레지스트리에 자동 등록되도록 함
+from src.gesture.common import StartGesture, StopGesture
+from src.gesture.ppt import NextGesture, PrevGesture, ShowStartGesture
+from src.gesture.youtube import (
+    PlayPauseGesture, VolumeUpGesture, VolumeDownGesture,
+    MuteGesture, FullscreenGesture
+)
+
 
 class GestureManager(QThread):
     """제스처 인식 통합 관리 클래스 (별도 스레드에서 실행)"""
     
     # 시그널 정의
-    gesture_detected = pyqtSignal(str)  # "START", "STOP", "NONE"
+    gesture_detected = pyqtSignal(str)  # 인식된 제스처 이름 (모드별 제스처 포함: "START", "STOP", "NEXT", "PREV", etc. 또는 "NONE")
     frame_ready = pyqtSignal(object)  # QPixmap
     
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, mode: str = "COMMON"):
         """
         제스처 매니저 초기화
         
         Args:
             parent: 부모 QObject
+            mode: 초기 모드 ("COMMON", "PPT", "YOUTUBE")
         """
         super().__init__(parent)
         
         # 모듈 초기화
         self.camera = Camera()
         self.mediapipe_handler = MediapipeHandler()
-        self.gesture_detector = GestureDetector()
+        self.gesture_detector = GestureDetector(mode=mode)
         
         # 상태 관리
         self.is_running = False
         self._should_stop = False
+        self.current_mode = mode
     
     def initialize(self) -> bool:
         """
@@ -142,9 +152,34 @@ class GestureManager(QThread):
             if sleep_time > 0:
                 time.sleep(sleep_time)
     
+    def set_mode(self, mode: str):
+        """
+        모드 설정
+        
+        모드 전환 시 제스처 인식기가 새로운 모드의 제스처를 인식하도록 업데이트합니다.
+        
+        Args:
+            mode: 모드 이름 ("COMMON", "PPT", "YOUTUBE")
+        """
+        if mode in ["COMMON", "PPT", "YOUTUBE"]:
+            self.current_mode = mode
+            # GestureDetector의 모드 변경 (시퀀스 버퍼도 자동 초기화됨)
+            self.gesture_detector.set_mode(mode)
+    
+    def get_mode(self) -> str:
+        """
+        현재 모드 반환
+        
+        Returns:
+            str: 현재 모드
+        """
+        return self.current_mode
+    
     def set_sensitivity(self, sensitivity: int):
         """
         감도 설정 (0-100)
+        
+        감도 값을 임계값으로 변환하여 GestureDetector에 전달합니다.
         
         Args:
             sensitivity: 감도 값 (0-100)
