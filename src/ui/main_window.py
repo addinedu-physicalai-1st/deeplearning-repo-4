@@ -17,6 +17,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 import config
 from .gesture_display import GestureDisplayWidget
+from src.gesture.gesture_manager import GestureManager
 
 
 class MainWindow(QMainWindow):
@@ -33,7 +34,19 @@ class MainWindow(QMainWindow):
         self.current_mode = "PPT"
         self.sensitivity = config.SENSITIVITY_DEFAULT
         self.is_detecting = False
+        
+        # 제스처 매니저 초기화
+        self.gesture_manager = GestureManager(self)
+        self.gesture_manager.gesture_detected.connect(self.on_gesture_detected)
+        self.gesture_manager.frame_ready.connect(self.update_webcam_frame)
+        
         self.init_ui()
+        
+        # 초기 감도 설정
+        self.gesture_manager.set_sensitivity(self.sensitivity)
+        
+        # 프로그램 시작 시 웹캠 자동 초기화
+        self._initialize_camera()
     
     def init_ui(self):
         """UI 초기화"""
@@ -83,6 +96,45 @@ class MainWindow(QMainWindow):
         self.setStatusBar(self.status_bar)
         
         central_widget.setLayout(main_layout)
+    
+    def _initialize_camera(self):
+        """웹캠 자동 초기화 (프로그램 시작 시) - 비동기 처리"""
+        # QTimer를 사용하여 초기화를 지연시켜 UI가 먼저 표시되도록 함
+        from PyQt6.QtCore import QTimer
+        init_timer = QTimer(self)
+        init_timer.setSingleShot(True)
+        init_timer.timeout.connect(self._do_initialize_camera)
+        init_timer.start(100)  # 100ms 후 초기화
+    
+    def _do_initialize_camera(self):
+        """실제 웹캠 초기화 수행"""
+        if self.gesture_manager.initialize():
+            self.gesture_manager.start_detection()  # QThread.start() 호출
+            self.status_bar.showMessage("웹캠이 초기화되었습니다. 모션을 감지할 준비가 되었습니다.")
+            self.gesture_display.update_status("대기 중", None)
+            # 웹캠 영상이 곧 표시될 것임을 알림
+            self.webcam_label.setText("웹캠 영상을 불러오는 중...")
+        else:
+            self.status_bar.showMessage("웹캠 초기화 실패. 웹캠을 확인해주세요.")
+            self.webcam_label.setText("웹캠을 찾을 수 없습니다")
+            self.webcam_label.setStyleSheet(f"""
+                background-color: #FEE2E2;
+                border: 2px dashed #EF4444;
+                border-radius: 10px;
+                color: #DC2626;
+            """)
+    
+    def showEvent(self, event):
+        """윈도우 표시 이벤트"""
+        super().showEvent(event)
+        # 윈도우가 표시된 후 웹캠 초기화 (이미 _initialize_camera에서 처리)
+    
+    def closeEvent(self, event):
+        """윈도우 종료 이벤트 - 리소스 정리"""
+        if hasattr(self, 'gesture_manager'):
+            self.gesture_manager.stop_detection()  # 스레드 종료
+            self.gesture_manager.release()
+        event.accept()
     
     def create_logo_section(self):
         """로고 섹션 생성"""
@@ -290,28 +342,65 @@ class MainWindow(QMainWindow):
         group_box.setLayout(layout)
         return group_box
     
+    def set_detection_state(self, is_active: bool):
+        """
+        시작/종료 상태를 통합 관리
+        모션 인식과 버튼 클릭 모두 이 메서드를 사용
+        
+        Args:
+            is_active: True면 감지 활성화, False면 감지 비활성화
+        """
+        self.is_detecting = is_active
+        self.start_button.setEnabled(not is_active)
+        self.stop_button.setEnabled(is_active)
+        
+        if is_active:
+            self.status_bar.showMessage("제스처 인식 시작됨")
+            self.gesture_display.update_status("감지 중", None)
+            self.start_detection.emit()
+        else:
+            self.status_bar.showMessage("제스처 인식 중지됨")
+            self.gesture_display.update_status("대기 중", None)
+            self.stop_detection.emit()
+    
     def on_start_clicked(self):
         """시작 버튼 클릭 핸들러"""
-        self.is_detecting = True
-        self.start_button.setEnabled(False)
-        self.stop_button.setEnabled(True)
-        self.status_bar.showMessage("제스처 인식 시작됨")
-        self.gesture_display.update_status("감지 중", None)
-        self.start_detection.emit()
+        self.set_detection_state(True)
     
     def on_stop_clicked(self):
         """종료 버튼 클릭 핸들러"""
-        self.is_detecting = False
-        self.start_button.setEnabled(True)
-        self.stop_button.setEnabled(False)
-        self.status_bar.showMessage("제스처 인식 중지됨")
-        self.gesture_display.update_status("대기 중", None)
-        self.stop_detection.emit()
+        self.set_detection_state(False)
+    
+    def on_gesture_detected(self, gesture: str):
+        """
+        제스처 인식 결과 처리
+        
+        Args:
+            gesture: 인식된 제스처 ("START", "STOP", "NONE")
+        """
+        # 제스처 표시 업데이트
+        if gesture == "START":
+            self.gesture_display.update_status("감지 중", "시작 모션")
+            # 시작 모션 감지 시 상태 변경
+            if not self.is_detecting:
+                self.set_detection_state(True)
+        elif gesture == "STOP":
+            self.gesture_display.update_status("감지 중", "종료 모션")
+            # 종료 모션 감지 시 상태 변경
+            if self.is_detecting:
+                self.set_detection_state(False)
+        else:
+            # NONE 또는 기타 제스처
+            if self.is_detecting:
+                self.gesture_display.update_status("감지 중", None)
     
     def on_sensitivity_changed(self, value):
         """감도 변경 핸들러"""
         self.sensitivity = value
         self.sensitivity_label.setText(f"감도: {value}%")
+        # 제스처 매니저에 감도 전달
+        if hasattr(self, 'gesture_manager'):
+            self.gesture_manager.set_sensitivity(value)
         self.sensitivity_changed.emit(value)
     
     def on_mode_changed(self, mode):
@@ -322,13 +411,24 @@ class MainWindow(QMainWindow):
     
     def update_webcam_frame(self, pixmap):
         """웹캠 프레임 업데이트"""
-        if pixmap:
-            scaled_pixmap = pixmap.scaled(
-                self.webcam_label.size(),
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation
-            )
-            self.webcam_label.setPixmap(scaled_pixmap)
+        if pixmap and not pixmap.isNull():
+            # 라벨 크기가 0이면 원본 크기 사용
+            label_size = self.webcam_label.size()
+            if label_size.width() > 0 and label_size.height() > 0:
+                scaled_pixmap = pixmap.scaled(
+                    label_size,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation
+                )
+            else:
+                scaled_pixmap = pixmap
+            
+            # Pixmap이 유효한지 확인
+            if scaled_pixmap and not scaled_pixmap.isNull():
+                self.webcam_label.setPixmap(scaled_pixmap)
+                # 텍스트 제거 (프레임이 표시되면)
+                if self.webcam_label.text():
+                    self.webcam_label.setText("")
     
     def update_gesture(self, gesture_name: str):
         """인식된 제스처 업데이트"""

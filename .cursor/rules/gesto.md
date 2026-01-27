@@ -7,7 +7,10 @@ Gesto는 웹캠과 제스처만으로 PPT와 유투브를 제어하는 핸즈프
 ## 기술 스택
 
 - **Python**: 3.10
-- **Mediapipe**: 손 제스처 인식
+- **Mediapipe**: 0.10.32 (Task API 사용 필수)
+  - Mediapipe 0.10.x 버전부터는 Task API를 사용해야 함
+  - `mp.tasks.vision.HandLandmarker` 사용
+  - 구식 `mp.solutions.hands` API는 사용 불가
 - **LSTM**: 제스처 시퀀스 학습 및 분류
 - **PyAutoGui**: 화면 제어 및 자동화
 - **PyQT6**: GUI 애플리케이션
@@ -79,9 +82,12 @@ gesto/
 
 ### Mediapipe 사용
 
+- **버전**: 0.10.32
+- **API**: Task API 사용 필수 (`mp.tasks.vision.HandLandmarker`)
 - Mediapipe Hands 솔루션을 사용하여 손 랜드마크 추출
 - 실시간 처리 성능 고려
 - 제스처 인식 정확도 최적화
+- **주의**: 구식 `mp.solutions.hands` API는 0.10.x 버전에서 사용 불가
 
 ### LSTM 모델
 
