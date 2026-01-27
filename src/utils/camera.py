@@ -8,6 +8,7 @@ from PyQt6.QtGui import QPixmap, QImage
 from typing import Optional, Tuple
 import sys
 import os
+import platform
 
 # 프로젝트 루트를 경로에 추가
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -35,6 +36,25 @@ class Camera:
         self.cap: Optional[cv2.VideoCapture] = None
         self.is_initialized = False
     
+    def _get_camera_backend(self):
+        """
+        플랫폼에 맞는 카메라 백엔드 반환
+        
+        Returns:
+            int: OpenCV 카메라 백엔드 상수
+        """
+        system = platform.system()
+        
+        if system == "Darwin":  # macOS
+            return cv2.CAP_AVFOUNDATION
+        elif system == "Linux":  # Linux/Ubuntu
+            return cv2.CAP_V4L2
+        elif system == "Windows":  # Windows
+            return cv2.CAP_DSHOW
+        else:
+            # 알 수 없는 플랫폼은 기본 백엔드 사용
+            return None
+    
     def initialize(self) -> bool:
         """
         웹캠 초기화
@@ -43,7 +63,9 @@ class Camera:
             bool: 초기화 성공 여부
         """
         try:
-            # macOS에서는 AVFoundation 백엔드를 명시적으로 사용
+            # 플랫폼에 맞는 카메라 백엔드 가져오기
+            backend = self._get_camera_backend()
+            
             # 여러 인덱스를 시도하여 작동하는 웹캠 찾기
             working_cap = None
             working_index = None
@@ -57,7 +79,11 @@ class Camera:
                 indices_to_try = [1, 2, 0]  # 0번은 마지막에 시도
             
             for idx in indices_to_try:
-                test_cap = cv2.VideoCapture(idx, cv2.CAP_AVFOUNDATION)
+                # 백엔드가 지정된 경우 해당 백엔드 사용, 아니면 기본 백엔드 사용
+                if backend is not None:
+                    test_cap = cv2.VideoCapture(idx, backend)
+                else:
+                    test_cap = cv2.VideoCapture(idx)
                 
                 if not test_cap.isOpened():
                     test_cap.release()
@@ -100,6 +126,7 @@ class Camera:
             return True
             
         except Exception as e:
+            print(f"카메라 초기화 오류: {e}")
             self.is_initialized = False
             return False
     
