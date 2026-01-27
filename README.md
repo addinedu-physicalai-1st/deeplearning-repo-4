@@ -33,6 +33,22 @@ conda activate gesto
 pip install -r requirements.txt
 ```
 
+## Semantic commit message
+
+커밋 메시지는 다음 접두사를 사용해야 합니다:
+- `feat`: 새로운 기능 추가
+- `fix`: 버그 수정
+- `chore`: 빌드 업무 수정, 패키지 매니저 설정 등
+- `refactor`: 코드 리팩토링
+
+예시:
+```
+feat: add gesture recognition
+fix: camera connection error
+chore: requirements.txt update
+refactor: improve UI component structure
+```
+
 ## 기여자
 
 - 최민성 
