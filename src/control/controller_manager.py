@@ -11,7 +11,10 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from src.control.base.action_base import BaseAction
-from src.control.common.common_actions import StartAction, StopAction
+from src.control.common.common_actions import (
+    StartAction, StopAction,
+    OpenGameAction, UpAction, DownAction, LeftAction, RightAction
+)
 from src.control.ppt.ppt_actions import NextAction, PrevAction, ShowStartAction
 from src.control.youtube.youtube_actions import (
     PlayPauseAction, VolumeUpAction, VolumeDownAction,
@@ -20,7 +23,10 @@ from src.control.youtube.youtube_actions import (
 from src.gesture.registry.action_mapper import ActionMapper
 
 # 제스처 클래스들을 import하여 데코레이터가 실행되도록 함
-from src.gesture.common import StartGesture, StopGesture
+from src.gesture.common import (
+    StartGesture, StopGesture,
+    SpidermanGesture, PointUpGesture, PointDownGesture, PointLeftGesture, PointRightGesture
+)
 from src.gesture.ppt import NextGesture, PrevGesture, ShowStartGesture
 from src.gesture.youtube import (
     PlayPauseGesture, VolumeUpGesture, VolumeDownGesture,
@@ -52,10 +58,17 @@ class ControllerManager:
             "VOLUME_DOWN": VolumeDownAction(),
             "MUTE": MuteAction(),
             "FULLSCREEN": FullscreenAction(),
+            "FULLSCREEN": FullscreenAction(),
+            # GAME 액션
+            "OPEN_GAME": OpenGameAction(),
+            "UP": UpAction(),
+            "DOWN": DownAction(),
+            "LEFT": LeftAction(),
+            "RIGHT": RightAction(),
         }
         
         # 현재 모드
-        self.current_mode = "PPT"  # "COMMON", "PPT", "YOUTUBE"
+        self.current_mode = "PPT"  # "COMMON", "PPT", "YOUTUBE", "GAME"
         
         # 액션 매퍼
         self.action_mapper = ActionMapper()
@@ -68,9 +81,9 @@ class ControllerManager:
         액션 매퍼를 통해 현재 모드에 맞는 액션만 실행됩니다.
         
         Args:
-            mode: 모드 이름 ("COMMON", "PPT", "YOUTUBE")
+            mode: 모드 이름 ("COMMON", "PPT", "YOUTUBE", "GAME")
         """
-        if mode in ["COMMON", "PPT", "YOUTUBE"]:
+        if mode in ["COMMON", "PPT", "YOUTUBE", "GAME"]:
             self.current_mode = mode
     
     def get_current_mode(self) -> str:
@@ -111,9 +124,23 @@ class ControllerManager:
         if action_name is None:
             action_name = gesture
         
-        # 액션 실행
+        # 액션 실행 (비동기 처리로 UI 블로킹 방지)
         if action_name in self.actions:
-            return self.actions[action_name].execute()
+            # 스레드로 실행
+            import threading
+            def run_wrapper():
+                try:
+                    self.actions[action_name].execute()
+                except Exception as e:
+                    print(f"Action Execution Failed: {e}")
+                    import traceback
+                    traceback.print_exc()
+
+            threading.Thread(
+                target=run_wrapper, 
+                daemon=True
+            ).start()
+            return True
         
         return False
     
