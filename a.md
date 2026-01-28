@@ -21,7 +21,7 @@ graph TD
             MainCtrl(Main Controller)
             InputHandler(Input Handler)
             ActionDispatch(Action Dispatcher)
-        end
+        en
 
         %% Model (데이터 & 판단)
         subgraph Model_Group [Model (Core Logic & State)]
