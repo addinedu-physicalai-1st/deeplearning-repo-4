@@ -1,1 +1,1 @@
-move jira board to in-progress
+comment jira issue
