@@ -70,5 +70,5 @@ graph TD
     class GestureEngine,SafetyLogic,ModeState model;a`
     class MainWindow,Overlay,TrayIcon view;
     class MainCtrl,InputHandler,ActionDispatch controller;
-    class PPT_Ctrl,Media_Ctrl,Game_Ctrl output;
+    class PPT_Ctrl,Media_Ctrl,Game_Ctrl output;a
 ```
