@@ -68,7 +68,7 @@ graph TD
     %% 스타일 적용
     class Webcam,KeyboardListner input;
     class GestureEngine,SafetyLogic,ModeState model;a`
-    class MainWindow,Overlay,TrayIcon view;
+    class MainWindow,Overlay,TrayIcon view;a
     class MainCtrl,InputHandler,ActionDispatch controller;
     class PPT_Ctrl,Media_Ctrl,Game_Ctrl output;a
 ```
