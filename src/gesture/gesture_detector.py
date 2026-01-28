@@ -29,7 +29,7 @@ class GestureDetector:
         제스처 인식기 초기화
         
         Args:
-            mode: 현재 모드 ("COMMON", "PPT", "YOUTUBE")
+            mode: 현재 모드 ("COMMON", "PPT", "YOUTUBE", "GAME")
             recognition_method: 인식 방법 ("rule", "lstm", "auto")
                               "auto"면 제스처별 기본 방법 사용
         """
@@ -45,7 +45,7 @@ class GestureDetector:
         # 동적 제스처용 시퀀스 버퍼
         self.sequence_buffers: Dict[str, deque] = {}
     
-    def detect(self, landmarks_list: Optional[List]) -> str:
+    def detect(self, landmarks_list: Optional[List]) -> List[str]:
         """
         랜드마크에서 제스처 인식 (정적/동적 자동 분기)
         
@@ -54,34 +54,66 @@ class GestureDetector:
                            각 리스트는 21개의 랜드마크 포인트를 포함
         
         Returns:
-            str: 인식된 제스처 이름 (인식되지 않으면 "NONE")
+            List[str]: 인식된 제스처 이름 리스트 (없으면 ["NONE"])
         """
         if landmarks_list is None or len(landmarks_list) == 0:
-            return "NONE"
-        
-        # 첫 번째 손만 사용 (나중에 양손 지원 가능)
-        landmarks = landmarks_list[0]
-        
-        if len(landmarks) < 21:
-            return "NONE"
-        
-        # 현재 모드의 제스처 목록 조회
-        gesture_names = self.registry.get_gestures_by_mode(self.mode)
-        
-        # 정적 제스처 먼저 인식
-        for gesture_name in gesture_names:
-            gesture = self.registry.get_gesture(gesture_name)
-            if gesture is None:
-                continue
+            return ["NONE"]
             
-            # 정적 제스처 인식
-            if gesture.get_gesture_type() == "static":
-                result = self._detect_static_gesture(gesture, landmarks)
-                if result != "NONE":
-                    return result
+        detected_gestures = []
+            
+        # 모든 감지된 손에 대해 제스처 확인
+        for landmarks in landmarks_list:
+            if len(landmarks) < 21:
+                continue
+                
+            # 현재 모드의 제스처 목록 조회
+            gesture_names = self.registry.get_gestures_by_mode(self.mode)
+            # COMMON 모드 제스처도 항상 함께 검사 (Spiderman 등 전역 제스처 지원)
+            if self.mode != "COMMON":
+                common_gestures = self.registry.get_gestures_by_mode("COMMON")
+                # 중복 제거 및 GAME 모드에서 STOP, START, OPEN_GAME 제외
+                for g in common_gestures:
+                    if self.mode == "GAME" and g in ["STOP", "START", "OPEN_GAME"]:
+                        continue
+                    if g not in gesture_names:
+                        gesture_names.append(g)
+            
+            # 정적 제스처 먼저 인식
+            for gesture_name in gesture_names:
+                # GAME 모드에서 제외된 제스처 건너뛰기 (Double check)
+                if self.mode == "GAME" and gesture_name in ["STOP", "START", "OPEN_GAME"]:
+                    continue
+                    
+                # print(f"Checking Gesture: {gesture_name}") # DEBUG
+                gesture = self.registry.get_gesture(gesture_name)
+                if gesture is None:
+                    continue
+                
+                # 정적 제스처 인식
+                if gesture.get_gesture_type() == "static":
+                    result = self._detect_static_gesture(gesture, landmarks)
+                    if result != "NONE":
+                        print(f"Detected Gesture: {result}") # DEBUG
+                        detected_gestures.append(result)
+                        break 
+                        # 한 손당 하나만? 아니면 한 손에서도 여러개? 
+                        # 보통 한 손은 하나의 모양만 가짐. 
+                        # 따라서 이 손에 대해 우선순위 높은거 찾으면 다음 손으로 넘어가는게 맞음.
+
+        # 동적 제스처는 시퀀스 버퍼에 추가하고 인식
+        # 현재 동적 제스처 로직은 단일 손 제어에 맞춰져 있어 복잡함.
+        # 일단 정적 제스처가 있으면 동적 제스처는 건너뜀 (안전성)
+        if detected_gestures:
+            return detected_gestures
+            
+        return ["NONE"]
+            
+            # 동적 제스처는 지금은 첫 번째 손만 처리하거나 스킵 (복잡성 방지)
+            # 여기서는 정적 제스처가 우선이므로 루프 계속
         
         # 동적 제스처는 시퀀스 버퍼에 추가하고 인식
         for gesture_name in gesture_names:
+            # print(f"Checking Gesture: {gesture_name}") # DEBUG
             gesture = self.registry.get_gesture(gesture_name)
             if gesture is None:
                 continue
@@ -191,9 +223,9 @@ class GestureDetector:
         모드 설정
         
         Args:
-            mode: 모드 이름 ("COMMON", "PPT", "YOUTUBE")
+            mode: 모드 이름 ("COMMON", "PPT", "YOUTUBE", "GAME")
         """
-        if mode in ["COMMON", "PPT", "YOUTUBE"]:
+        if mode in ["COMMON", "PPT", "YOUTUBE", "GAME"]:
             self.mode = mode
             # 모드 변경 시 시퀀스 버퍼 초기화
             self.sequence_buffers.clear()
