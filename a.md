@@ -33,7 +33,7 @@ graph TD
         %% View (화면)
         subgraph View_Group [View (GUI & Feedback)]
             MainWindow(🖥️ Main Window<br>Camera Feed Display)
-            Overlay(🎨 Overlay / HUD<br>Status Bar & Icons)
+            Overlay(🎨 Overlay / HUD<br>Stataus Bar & Icons)
             TrayIcon(🔽 System Tray Icon)
         end
     end
