@@ -18,10 +18,10 @@
 해당 모드 폴더에 새 파일을 생성하고 `StaticGesture`를 상속받는 클래스를 만듭니다:
 
 ```python
-# src/gesture/common/my_static_gesture.py
+# src/mediapipe/gestures.py 에 클래스 추가
 from typing import List, Dict
-from src.gesture.base.static_gesture import StaticGesture
-from src.gesture.registry.action_mapper import maps_to_action
+from src.mediapipe.gestures import StaticGesture
+from src.mediapipe.registry import maps_to_action
 
 @maps_to_action("COMMON", "MY_ACTION")  # 모드, 액션 이름
 class MyStaticGesture(StaticGesture):
@@ -52,20 +52,22 @@ class MyStaticGesture(StaticGesture):
 
 ### 2. 레지스트리에 등록
 
-해당 모드의 `__init__.py` 파일에서 제스처를 import하고 등록합니다:
+`src/mediapipe/gestures.py`에 새 제스처 클래스를 추가한 뒤, 파일 하단의 `_register_all()` 목록에 클래스를 추가합니다:
 
 ```python
-# src/gesture/common/__init__.py
-from .my_static_gesture import MyStaticGesture
-
-from src.gesture.registry.gesture_registry import GestureRegistry
-registry = GestureRegistry()
-registry.register(MyStaticGesture)  # 자동 등록
+# src/mediapipe/gestures.py 하단
+def _register_all() -> None:
+    reg = GestureRegistry()
+    for cls in (
+        ...
+        MyStaticGesture,  # 추가
+    ):
+        reg.register(cls)
 ```
 
 ### 3. 액션 매핑
 
-`@maps_to_action` 데코레이터로 제스처와 액션을 연결합니다. 액션 클래스는 `src/control/` 폴더에 생성합니다.
+`@maps_to_action` 데코레이터로 제스처와 액션을 연결합니다. 액션 클래스는 `src/input_simulator/actions.py`에 추가합니다.
 
 ## 동적 제스처 (Dynamic Gesture) 등록
 
@@ -76,10 +78,10 @@ registry.register(MyStaticGesture)  # 자동 등록
 해당 모드 폴더에 새 파일을 생성하고 `DynamicGesture`를 상속받는 클래스를 만듭니다:
 
 ```python
-# src/gesture/common/my_dynamic_gesture.py
+# src/mediapipe/gestures.py 에 클래스 추가
 import numpy as np
-from src.gesture.base.dynamic_gesture import DynamicGesture
-from src.gesture.registry.action_mapper import maps_to_action
+from src.mediapipe.gestures import DynamicGesture
+from src.mediapipe.registry import maps_to_action
 
 @maps_to_action("COMMON", "MY_ACTION")  # 모드, 액션 이름
 class MyDynamicGesture(DynamicGesture):
@@ -121,16 +123,7 @@ class MyDynamicGesture(DynamicGesture):
 
 ### 2. 레지스트리에 등록
 
-정적 제스처와 동일하게 해당 모드의 `__init__.py`에서 등록합니다:
-
-```python
-# src/gesture/common/__init__.py
-from .my_dynamic_gesture import MyDynamicGesture
-
-from src.gesture.registry.gesture_registry import GestureRegistry
-registry = GestureRegistry()
-registry.register(MyDynamicGesture)  # 자동 등록
-```
+정적 제스처와 동일하게 `src/mediapipe/gestures.py`의 `_register_all()` 목록에 새 동적 제스처 클래스를 추가합니다.
 
 ## 제스처 인식 흐름
 
@@ -149,7 +142,4 @@ registry.register(MyDynamicGesture)  # 자동 등록
 
 ## 예시
 
-실제 구현 예시는 다음 파일들을 참고하세요:
-
-- 정적 제스처: `src/gesture/common/start_gesture.py`
-- 동적 제스처: `src/gesture/common/stop_gesture.py`
+실제 구현 예시는 `src/mediapipe/gestures.py` 내 `StartGesture`(정적), `StopGesture`(동적) 클래스를 참고하세요.

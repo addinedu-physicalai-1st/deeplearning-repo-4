@@ -1,278 +1,73 @@
-# Gesto 1주일 구현 계획
+# Gesto 구현 계획 (System Architecture 기반)
 
-## 프로젝트 현황
+## 1. 문서 개요
 
-- 현재 상태: 초기 단계 (README, 규칙 파일만 존재)
-- 목표: 웹캠과 제스처로 PPT와 유투브를 제어하는 핸즈프리 발표 도구 완성
-- 기술 스택: Mediapipe, LSTM, PyAutoGui, PyQT6, Python 3.10
+- **제목**: Gesto 구현 계획 (System Architecture 기반)
+- **목적**: 시스템 아키텍처에 맞춰 Mode Controller 중심의 실시간 인식 및 Pynput 제어를 구현한다.
+- **참조**:
+  - [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md) — 데이터 흐름, 레이어 역할, 폴더 매핑
+  - [SYSTEM_REQUIREMENTS.md](SYSTEM_REQUIREMENTS.md) — 시스템 요구사항
+  - 폴더 구조: [src/app](src/app), [src/capture](src/capture), [src/mode_controller](src/mode_controller), [src/mediapipe](src/mediapipe), [src/input_simulator](src/input_simulator)
 
-## 일정 개요
+## 2. 시스템 아키텍처
 
-### 1일차: 프로젝트 구조 및 개발 환경 구축
+- **상세 내용은 [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md) 참조.** (다이어그램, 레이어 역할, 폴더 매핑이 해당 문서에 정의됨.)
+- **요약**: Mode Controller가 현재 모드에 따라 해당 모드 인식기를 선택하고, 인식 결과를 Pynput에 명령으로 전달한다. 이미지는 opencv에서 **바로 Mediapipe**로 전달하며, YOLO는 범위에서 제외한다.
 
-**목표**: 개발 환경 설정 및 기본 프로젝트 구조 생성
+## 3. Mode Controller 역할 (핵심)
 
-**작업 내용**:
+- **입력**: UI에서의 모드 변경(`set_mode`)만. (YOLO/인물 영역은 현재 범위에서 제외.)
+- **책임**:
+  1. **현재 모드** 단일 소스로 유지.
+  2. 실시간 루프에서 **현재 모드에 맞는 인식기**만 사용 (Game → Posture, PPT → Gesture+LSTM, YouTube → Gesture+LSTM).
+  3. 인식 결과(제스처/자세 ID 또는 액션 이름)를 **명령**으로 변환하여 **Pynput(input_simulator)**에 전달.
+- **구현 방향**: [src/mode_controller/mode_controller.py](src/mode_controller/mode_controller.py)가 단순 상태 저장을 넘어, (1) 파이프라인/앱에서 **현재 모드용 인식기**를 조회하는 진입점을 제공하거나, (2) 인식 결과 → 명령 → Pynput 호출을 **Mode Controller가 오케스트레이션**하도록 단계적으로 확장한다.
 
-- [x] conda 가상환경 생성 및 활성화
-- [x] `requirements.txt` 작성 (Mediapipe, PyAutoGui, PyQT6, TensorFlow/Keras, numpy, opencv-python 등)
-- [x] 프로젝트 디렉토리 구조 생성:
-  ```
-  gesto/
-  ├── src/
-  │   ├── gesture/        # 제스처 인식 모듈
-  │   ├── control/        # 제어 로직 모듈
-  │   ├── ui/             # PyQT6 UI 모듈
-  │   └── utils/          # 유틸리티 함수
-  ├── models/             # 학습된 LSTM 모델
-  ├── data/               # 학습 데이터
-  ├── assets/             # 이미지 및 리소스
-  ├── tests/              # 테스트 코드
-  ├── main.py             # 메인 실행 파일
-  └── requirements.txt
-  ```
+## 4. 구현 단계 (Phase) — 체크리스트
 
-- [x] 기본 설정 파일 생성 (config.py)
-- [x] `.gitignore` 업데이트 (Python, 모델 파일, 데이터 파일 등)
+### Phase 1: Capture 및 PyQT UI
 
-**산출물**:
+- [ ] 웹캠(opencv) 확보 — [src/capture/camera.py](src/capture/camera.py)
+- [ ] UI에서 모드 선택·시작/종료·감도 표시 — [src/app/main_window.py](src/app/main_window.py), [src/app/gesture_display.py](src/app/gesture_display.py)
+- [ ] UI 이벤트가 Mode Controller에 모드 전달 (`set_mode(mode)` 수신)
+- [ ] S-01: 프로그램 실행/종료
+- [ ] S-04: 자신 모습 표시 (웹캠 영상)
+- [ ] S-05: 선택 모드 표시
+- [ ] S-02/S-02-TRIG-01/S-02-TRIG-02: 트리거 시작/종료 모션
+- [ ] S-03: 모션인식 시작·종료 확인
 
-- 프로젝트 구조
-- requirements.txt
-- 기본 설정 파일
+### Phase 2: Mode Controller 및 실시간 루프 오케스트레이션
 
----
+- [ ] "현재 모드 → 해당 모드 인식기 사용 → 인식 결과 → 명령 → Pynput" 실시간 루프 정립
+- [ ] [src/mode_controller/mode_controller.py](src/mode_controller/mode_controller.py) 확장
+- [ ] [src/mediapipe/pipeline.py](src/mediapipe/pipeline.py)가 Mode Controller에서 현재 모드 읽기
+- [ ] 파이프라인이 해당 모드용 detector/recognizer만 사용하도록 변경
+- [ ] 모드 변경 시 Game/PPT/YouTube 중 해당 인식 경로만 사용
 
-### 2일차: PyQT6 UI 기본 구조 구현
+### Phase 3: Mediapipe — 모드별 인식
 
-**목표**: UI 스켈레톤 구현 및 레이아웃 설계
+- [ ] **Game (Posture)**: [src/mediapipe/](src/mediapipe/) 내 Posture 인식 (직진/후진/좌회전/우회전)
+- [ ] **PPT (Gesture + LSTM)**: 다음/이전/쇼 시작 제스처 (규칙 기반 + LSTM 도입 시)
+- [ ] **YouTube (Gesture + LSTM)**: 재생/정지, 10초 앞/뒤, 음소거, 전체화면 (규칙 기반 + LSTM 도입 시)
+- [ ] **공통**: 트리거(시작/종료) 모션 모든 모드에서 인식
+- [ ] S-06-GME-01~04: Game 직진/후진/좌회전/우회전
+- [ ] S-06-YTB-01~06: YouTube 제스처
+- [ ] S-06-PPT-01~02: PPT 다음/이전 슬라이드
 
-**작업 내용**:
+### Phase 4: Pynput 연동 (명령 실행)
 
-- [x] `src/ui/main_window.py` 구현
-  - [x] 메인 윈도우 클래스 생성
-  - [x] 기본 레이아웃 설계 (QHBoxLayout, QVBoxLayout)
-  - [x] 웹캠 영상 표시 영역 (QLabel 또는 QGraphicsView) - 더미 이미지로 초기화
-  - [x] 제스처 인식 상태 표시 영역 (QLabel)
-  - [x] 모드 선택 버튼 (PPT/유투브) - QRadioButton 또는 QPushButton
-  - [x] 시작/종료 버튼 (QPushButton) - 클릭 이벤트 핸들러 (더미 함수)
-  - [x] **감도 설정 슬라이드 (QSlider)** - 제스처 인식 민감도 조절 (0-100%)
-  - [x] 감도 값 표시 레이블 (QLabel)
-  - [x] 상태바 (QStatusBar)
-- [x] `src/ui/gesture_display.py` 구현 (기본 구조)
-  - [x] 제스처 표시 위젯 클래스
-  - [x] 레이아웃 준비
-- [x] `main.py` 구현
-  - [x] PyQT6 애플리케이션 초기화
-  - [x] 메인 윈도우 표시
-  - [x] 이벤트 루프 실행
+- [ ] Mode Controller(또는 파이프라인)에서 내려준 명령을 [src/input_simulator/manager.py](src/input_simulator/manager.py), [src/input_simulator/actions.py](src/input_simulator/actions.py)로 전달
+- [ ] 키/마우스 입력 실행
+- [ ] 기존 제스처→액션 매핑(registry/action_mapper) 일관성 유지
 
-**산출물**:
+### Phase 5: 통합 테스트 및 문서
 
-- PyQT6 UI 스켈레톤
-- 기본 레이아웃 및 버튼
-- 실행 가능한 UI 애플리케이션
+- [ ] 통합 테스트: 모드 전환 → 해당 모드 인식만 동작 → Pynput 명령 실행 E2E
+- [ ] README에 아키텍처·Mode Controller 역할 반영
+- [ ] [GESTURE_GUIDE.md](GESTURE_GUIDE.md) 등 문서에 아키텍처·Mode Controller 역할 반영
 
----
+## 5. 기존 계획과의 차이
 
-### 3일차: 공통 기능 구현 - Mediapipe 기반 손 랜드마크 추출
-
-**목표**: 공통 필수 기능인 동작 감지 시작/종료를 위한 기본 제스처 인식 구현
-
-**작업 내용**:
-
-- [x] `src/utils/camera.py` 구현
-  - [x] 웹캠 초기화 및 관리
-  - [x] 프레임 캡처 및 전처리
-  - [x] 에러 처리 (웹캠 접근 실패 등)
-  - [x] 플랫폼별 백엔드 자동 선택 (macOS: AVFoundation, Linux: V4L2, Windows: DSHOW)
-  - [x] OpenCV 프레임을 QPixmap으로 변환
-- [x] `src/gesture/mediapipe_handler.py` 구현
-  - [x] Mediapipe Hands 솔루션 초기화 (Task API 사용)
-  - [x] 실시간 손 랜드마크 추출
-  - [x] 랜드마크 데이터 전처리 (정규화)
-  - [x] 랜드마크 시각화 (프레임에 그리기)
-  - [x] 모델 파일 자동 다운로드
-- [x] `src/gesture/gesture_detector.py` 구현 (기본 버전)
-  - [x] 간단한 제스처 인식 로직 (주먹/펴기 기반 시작/종료)
-  - [x] **감도 기반 제스처 인식 로직 구현**
-    - [x] 감도 값에 따라 인식 임계값 조절 (`set_threshold` 메서드)
-    - [x] `GestureManager.set_sensitivity()`를 통해 감도 전달
-    - [ ] 낮은 감도: 더 엄격한 조건 (정확한 제스처만 인식) - 현재는 임계값만 설정, 실제 로직 적용 필요
-    - [ ] 높은 감도: 더 관대한 조건 (유사한 제스처도 인식) - 현재는 임계값만 설정, 실제 로직 적용 필요
-  - [x] 제스처 상태 관리 (시작/종료)
-  - [x] 제스처 인식 결과 반환
-- [x] `src/gesture/gesture_manager.py` 구현
-  - [x] 웹캠, Mediapipe, 제스처 인식 모듈 통합 관리
-  - [x] QThread 기반 별도 스레드에서 실행
-  - [x] 실시간 제스처 인식 루프 (`run()` 메서드)
-  - [x] 제스처 인식 결과를 시그널로 전달
-  - [x] 웹캠 프레임을 시그널로 전달 (UI 업데이트용)
-- [ ] 기본 테스트 스크립트 작성
-
-**산출물**:
-
-- 웹캠 관리 유틸리티
-- Mediapipe 기반 손 랜드마크 추출 모듈
-- 기본 제스처 인식 모듈 (공통 기능용)
-
----
-
-### 4일차: 공통 기능을 UI에 연결
-
-**목표**: 동작 감지 시작/종료 기능을 UI에 통합
-
-**작업 내용**:
-
-- [ ] `src/ui/main_window.py` 업데이트
-  - [ ] 웹캠 영상 실시간 표시 (OpenCV 프레임을 QPixmap으로 변환)
-  - [ ] 시작 버튼 클릭 시:
-    - [ ] 웹캠 초기화
-    - [ ] Mediapipe 핸들러 시작
-    - [ ] 제스처 인식 루프 시작 (QTimer 사용)
-    - [ ] 상태 표시 업데이트
-  - [ ] 종료 버튼 클릭 시:
-    - [ ] 웹캠 해제
-    - [ ] 제스처 인식 중지
-    - [ ] 리소스 정리
-    - [ ] 상태 표시 업데이트
-  - [ ] **감도 슬라이드 이벤트 연결**
-    - [ ] 슬라이드 값 변경 시 제스처 인식 모듈에 감도 전달
-    - [ ] 실시간 감도 값 표시 업데이트
-    - [ ] 감도 변경에 따른 제스처 인식 동작 즉시 반영
-- [ ] `src/ui/gesture_display.py` 업데이트
-  - [ ] 실시간 손 랜드마크 시각화 (Mediapipe 결과를 화면에 그리기)
-  - [ ] 인식된 제스처 표시
-  - [ ] 상태 표시 (감지 중/중지됨)
-- [ ] 이벤트 시그널/슬롯 연결
-- [ ] 에러 처리 및 사용자 피드백
-
-**산출물**:
-
-- UI와 제스처 인식 모듈 통합
-- 동작 감지 시작/종료 기능 완성
-- 실시간 웹캠 영상 표시
-
----
-
-### 5일차: LSTM 모델 및 고급 제스처 인식 구현
-
-**목표**: 다양한 제스처를 인식하기 위한 LSTM 모델 구현
-
-**작업 내용**:
-
-- [ ] `src/gesture/lstm_model.py` 구현
-  - [ ] LSTM 모델 아키텍처 설계 (입력: 시퀀스 랜드마크, 출력: 제스처 클래스)
-  - [ ] 모델 컴파일 및 학습 함수
-  - [ ] 모델 저장/로드 함수
-- [ ] `src/gesture/data_collector.py` 구현
-  - [ ] 제스처 데이터 수집 도구
-  - [ ] 각 제스처별 데이터 수집 (시퀀스 저장)
-  - [ ] 데이터 라벨링 시스템
-- [ ] 제스처 정의 및 클래스 매핑
-  - [ ] 공통: 시작, 종료
-  - [ ] PPT: 다음, 이전, 쇼 시작
-  - [ ] 유투브: 재생, 일시정지, 볼륨업, 볼륨다운, 음소거, 전체화면
-- [ ] `src/gesture/gesture_detector.py` 업데이트
-  - [ ] LSTM 모델 통합
-  - [ ] 시퀀스 데이터 수집 및 예측
-  - [ ] **감도 기반 제스처 분류 로직**
-    - [ ] LSTM 예측 확률에 감도 값 적용
-    - [ ] 감도에 따른 인식 임계값 동적 조절
-    - [ ] 낮은 감도: 높은 확률 요구, 높은 감도: 낮은 확률로도 인식
-  - [ ] 제스처 분류 로직
-- [ ] 초기 학습 데이터 수집 (각 제스처당 최소 50-100개 샘플)
-
-**산출물**:
-
-- LSTM 모델 구조
-- 데이터 수집 도구
-- 고급 제스처 인식 모듈
-- 초기 학습 데이터셋
-
----
-
-### 6일차: PPT/유투브 제어 기능 구현 및 UI 연결
-
-**목표**: 제스처 인식 결과에 따른 화면 제어 기능 구현 및 UI 통합
-
-**작업 내용**:
-
-- [ ] `src/control/ppt_controller.py` 구현
-  - [ ] 다음 슬라이드: `pyautogui.press('right')` 또는 `pyautogui.hotkey('ctrl', 'right')`
-  - [ ] 이전 슬라이드: `pyautogui.press('left')` 또는 `pyautogui.hotkey('ctrl', 'left')`
-  - [ ] 슬라이드 쇼 시작: `pyautogui.hotkey('f5')` 또는 PowerPoint 자동화
-- [ ] `src/control/youtube_controller.py` 구현
-  - [ ] 재생/일시정지: `pyautogui.press('space')`
-  - [ ] 볼륨업: `pyautogui.press('up')` (여러 번)
-  - [ ] 볼륨다운: `pyautogui.press('down')` (여러 번)
-  - [ ] 음소거: `pyautogui.press('m')`
-  - [ ] 전체화면: `pyautogui.press('f')`
-- [ ] `src/control/controller_manager.py` 구현
-  - [ ] 모드 전환 (PPT/유투브)
-  - [ ] 제스처-액션 매핑 관리
-  - [ ] 제어 명령 실행
-- [ ] `src/ui/main_window.py` 업데이트
-  - [ ] 모드 선택 버튼 기능 연결
-  - [ ] 제스처 인식 결과를 제어 로직에 전달
-  - [ ] 제어 액션 실행 피드백 표시
-  - [ ] **감도 슬라이드와 제어 기능 연동 확인**
-- [ ] 통합 테스트
-  - [ ] 각 모드별 제스처 인식 및 제어 동작 확인
-  - [ ] 감도 변경에 따른 제스처 인식 변화 테스트
-
-**산출물**:
-
-- PPT 제어 모듈
-- 유투브 제어 모듈
-- 제어 관리자
-- UI와 제어 로직 통합
-- 완전한 기능을 가진 애플리케이션
-
----
-
-### 7일차: 통합 테스트, 버그 수정 및 최적화
-
-**목표**: 전체 시스템 통합 테스트 및 최종 완성
-
-**작업 내용**:
-
-- [ ] 통합 테스트
-  - [ ] 전체 플로우 테스트 (시작 → 제스처 인식 → 제어 → 종료)
-  - [ ] PPT 모드 전체 플로우 테스트
-  - [ ] 유투브 모드 전체 플로우 테스트
-  - [ ] 모드 전환 테스트
-  - [ ] 에러 케이스 테스트
-- [ ] 제스처 인식 정확도 테스트
-  - [ ] 각 제스처별 인식률 측정
-  - [ ] 오인식 케이스 분석
-  - [ ] **감도별 인식 정확도 테스트**
-    - [ ] 낮은 감도에서의 정확도
-    - [ ] 높은 감도에서의 인식률
-    - [ ] 최적 감도 값 찾기
-- [ ] 버그 수정
-  - [ ] 발견된 버그 수정
-  - [ ] 엣지 케이스 처리
-- [ ] 성능 최적화
-  - [ ] 프레임 처리 속도 개선
-  - [ ] 메모리 사용량 최적화
-  - [ ] 제스처 인식 지연 최소화
-- [ ] 에러 처리 강화
-  - [ ] 예외 상황 처리
-  - [ ] 로깅 시스템 추가
-- [ ] 사용성 개선
-  - [ ] UI/UX 개선
-  - [ ] 피드백 메시지 추가
-  - [ ] 사용자 가이드 작성
-  - [ ] **감도 설정 사용법 가이드 추가**
-- [ ] 최종 테스트 및 문서화
-  - [ ] README 업데이트 (사용법, 설치 방법)
-  - [ ] 주요 기능 데모 준비
-
-**산출물**:
-
-- 최종 완성된 애플리케이션
-- 테스트 결과 리포트
-- 업데이트된 문서
-- 데모 준비
-
+- **제거**: 1~7일차 일정형 체크리스트, "초기 단계" 등 과거 상태 설명.
+- **유지**: 현재 디렉터리 구조(app, capture, mode_controller, mediapipe, input_simulator), config, requirements, SYSTEM_REQUIREMENTS 매핑.
+- **추가/강조**: 아키텍처 다이어그램(SYSTEM_ARCHITECTURE.md), Mode Controller의 "현재 모드 → 모드별 모델 선택 → 실시간 인식 → Pynput 명령" 역할, Phase 단위 구현 순서. **YOLO는 범위에서 제외하며, 이미지는 opencv에서 바로 Mediapipe로 전달.**

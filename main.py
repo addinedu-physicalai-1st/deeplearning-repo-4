@@ -4,7 +4,7 @@ Gesto 메인 실행 파일
 
 import sys
 from PyQt6.QtWidgets import QApplication
-from src.ui.main_window import MainWindow
+from src.app.main_window import MainWindow
 import config
 
 
