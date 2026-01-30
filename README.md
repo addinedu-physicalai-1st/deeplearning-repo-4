@@ -57,29 +57,23 @@ refactor: improve UI component structure
 
 ```
 src/
-├── gesture/                    # 제스처 인식 모듈
-│   ├── base/                   # 기본 클래스
-│   │   ├── gesture_base.py      # BaseGesture 추상 클래스
-│   │   ├── static_gesture.py    # StaticGesture 추상 클래스
-│   │   └── dynamic_gesture.py   # DynamicGesture 추상 클래스
-│   ├── common/                  # COMMON 모드 제스처
-│   │   ├── start_gesture.py     # START 제스처 (정적)
-│   │   └── stop_gesture.py      # STOP 제스처 (동적)
-│   ├── ppt/                     # PPT 모드 제스처
-│   ├── youtube/                 # YouTube 모드 제스처
-│   ├── registry/                 # 제스처 등록 시스템
-│   │   ├── gesture_registry.py  # 제스처 레지스트리
-│   │   └── action_mapper.py     # 제스처-액션 매핑
-│   ├── recognizers/              # 인식기
-│   │   ├── rule_based_recognizer.py  # 규칙 기반 인식기
-│   │   └── lstm_recognizer.py        # LSTM 기반 인식기
-│   ├── gesture_detector.py      # 통합 제스처 인식기
-│   └── gesture_manager.py       # 제스처 인식 통합 관리
-└── control/                     # 제어 모듈
-    ├── base/                    # 기본 액션 클래스
-    ├── common/                  # COMMON 액션
-    ├── ppt/                     # PPT 액션
-    └── youtube/                 # YouTube 액션
+├── app/                        # PyQT UI
+│   ├── main_window.py
+│   └── gesture_display.py
+├── capture/                    # 비디오 (opencv)
+│   └── camera.py
+├── mode_controller/            # 모드 상태
+│   └── mode_controller.py
+├── mediapipe/                  # 인식 (handler, detector, pipeline, gestures, registry, recognizers)
+│   ├── handler.py
+│   ├── detector.py
+│   ├── pipeline.py
+│   ├── gestures.py
+│   ├── registry.py
+│   └── recognizers.py
+└── input_simulator/            # OS 입력 (Pynput)
+    ├── manager.py
+    └── actions.py
 ```
 
 ## 제스처 등록 및 인식 방법
