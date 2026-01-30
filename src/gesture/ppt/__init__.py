@@ -7,6 +7,7 @@ PPT 제어를 위한 제스처 (NEXT, PREV, SHOW_START)
 from .next_gesture import NextGesture
 from .prev_gesture import PrevGesture
 from .show_start_gesture import ShowStartGesture
+from .ppt_gestures import WakeUpGesture
 
 # 레지스트리에 자동 등록
 from src.gesture.registry.gesture_registry import GestureRegistry
@@ -14,5 +15,6 @@ registry = GestureRegistry()
 registry.register(NextGesture)
 registry.register(PrevGesture)
 registry.register(ShowStartGesture)
+registry.register(WakeUpGesture)
 
-__all__ = ['NextGesture', 'PrevGesture', 'ShowStartGesture']
+__all__ = ['NextGesture', 'PrevGesture', 'ShowStartGesture', 'WakeUpGesture']

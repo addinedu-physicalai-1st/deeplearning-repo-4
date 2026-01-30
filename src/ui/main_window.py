@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 import config
 from .gesture_display import GestureDisplayWidget
 from src.gesture.gesture_manager import GestureManager
+from src.control.controller_manager import ControllerManager
 
 
 class MainWindow(QMainWindow):
@@ -27,7 +28,7 @@ class MainWindow(QMainWindow):
     start_detection = pyqtSignal()
     stop_detection = pyqtSignal()
     sensitivity_changed = pyqtSignal(int)
-    mode_changed = pyqtSignal(str)  # "PPT" or "YOUTUBE"
+    mode_changed = pyqtSignal(str)  # "COMMON", "PPT", "YOUTUBE", "GAME"
     
     def __init__(self):
         super().__init__()
@@ -36,9 +37,14 @@ class MainWindow(QMainWindow):
         self.is_detecting = False
         
         # 제스처 매니저 초기화
-        self.gesture_manager = GestureManager(self)
+        self.current_mode = "PPT" 
+        self.gesture_manager = GestureManager(self, mode="PPT")
         self.gesture_manager.gesture_detected.connect(self.on_gesture_detected)
         self.gesture_manager.frame_ready.connect(self.update_webcam_frame)
+        
+        # 컨트롤러 매니저 초기화
+        self.controller_manager = ControllerManager()
+        self.controller_manager.set_mode(self.current_mode)
         
         self.init_ui()
         
@@ -95,7 +101,12 @@ class MainWindow(QMainWindow):
         self.status_bar.showMessage("준비됨")
         self.setStatusBar(self.status_bar)
         
+        self.setStatusBar(self.status_bar)
+        
         central_widget.setLayout(main_layout)
+        
+        # Set default mode safely after UI is fully initialized
+        self.ppt_radio.setChecked(True)
     
     def _initialize_camera(self):
         """웹캠 자동 초기화 (프로그램 시작 시) - 비동기 처리"""
@@ -229,19 +240,27 @@ class MainWindow(QMainWindow):
         self.mode_button_group = QButtonGroup()
         self.ppt_radio = QRadioButton("PPT 모드")
         self.youtube_radio = QRadioButton("유투브 모드")
-        self.ppt_radio.setChecked(True)
+        self.game_radio = QRadioButton("게임 모드")
+        self.game_radio = QRadioButton("게임 모드")
+        # self.game_radio.setChecked(True) # Moved to after connection
         
         self.mode_button_group.addButton(self.ppt_radio, 0)
         self.mode_button_group.addButton(self.youtube_radio, 1)
+        self.mode_button_group.addButton(self.game_radio, 2)
         
         self.ppt_radio.setStyleSheet(f"color: {config.COLOR_TEXT_PRIMARY}; font-size: 12px;")
         self.youtube_radio.setStyleSheet(f"color: {config.COLOR_TEXT_PRIMARY}; font-size: 12px;")
+        self.game_radio.setStyleSheet(f"color: {config.COLOR_TEXT_PRIMARY}; font-size: 12px;")
         
         self.ppt_radio.toggled.connect(lambda: self.on_mode_changed("PPT"))
         self.youtube_radio.toggled.connect(lambda: self.on_mode_changed("YOUTUBE"))
+        self.game_radio.toggled.connect(lambda: self.on_mode_changed("GAME"))
+
+        # No setChecked here to avoid premature signal firing
         
         mode_layout.addWidget(self.ppt_radio)
         mode_layout.addWidget(self.youtube_radio)
+        mode_layout.addWidget(self.game_radio)
         mode_group.setLayout(mode_layout)
         layout.addWidget(mode_group)
         
@@ -379,7 +398,7 @@ class MainWindow(QMainWindow):
             gesture: 인식된 제스처 ("START", "STOP", "NONE")
         """
         # 제스처 표시 업데이트
-        if gesture == "START":
+        if gesture == "START" or gesture == "START_SYSTEM" or gesture == "WAKE_UP":
             self.gesture_display.update_status("감지 중", "시작 모션")
             # 시작 모션 감지 시 상태 변경
             if not self.is_detecting:
@@ -389,10 +408,30 @@ class MainWindow(QMainWindow):
             # 종료 모션 감지 시 상태 변경
             if self.is_detecting:
                 self.set_detection_state(False)
+        elif gesture == "OPEN_GAME":
+            self.gesture_display.update_status("감지됨", "게임 열기 (Spiderman)")
+            # Spiderman 감지 시 자동으로 게임 모드로 전환 및 감지 시작
+            if self.current_mode != "GAME":
+                self.game_radio.setChecked(True)
+            
+            # 항상 감지 상태로 전환 (Wake Up)
+            self.set_detection_state(True)
+        elif gesture == "POINT_UP":
+            self.gesture_display.update_status("감지됨", "위로 이동 (검지 위)")
+        elif gesture == "POINT_DOWN":
+            self.gesture_display.update_status("감지됨", "아래로 이동 (검지 아래)")
+        elif gesture == "POINT_LEFT":
+            self.gesture_display.update_status("감지됨", "왼쪽 이동 (검지 왼쪽)")
+        elif gesture == "POINT_RIGHT":
+            self.gesture_display.update_status("감지됨", "오른쪽 이동 (검지 오른쪽)")
         else:
             # NONE 또는 기타 제스처
             if self.is_detecting:
                 self.gesture_display.update_status("감지 중", None)
+        
+        # 액션 실행 (감지 중일 때만)
+        if self.is_detecting and gesture != "NONE":
+            self.controller_manager.execute_action(gesture)
     
     def on_sensitivity_changed(self, value):
         """감도 변경 핸들러"""
@@ -408,6 +447,18 @@ class MainWindow(QMainWindow):
         self.current_mode = mode
         self.mode_changed.emit(mode)
         self.status_bar.showMessage(f"{mode} 모드로 전환됨")
+        
+        # Explicitly update GestureManager
+        if hasattr(self, 'gesture_manager'):
+            self.gesture_manager.set_mode(mode)
+            
+        # Update ControllerManager
+        if hasattr(self, 'controller_manager'):
+            self.controller_manager.set_mode(mode)
+            
+        # 게임 모드 진입 시 자동으로 감지 활성화 (사용자 요청)
+        if mode == "GAME" and not self.is_detecting:
+            self.set_detection_state(True)
     
     def update_webcam_frame(self, pixmap):
         """웹캠 프레임 업데이트"""

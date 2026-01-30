@@ -131,11 +131,14 @@ class GestureManager(QThread):
                 annotated_frame = frame
                 landmarks_list = None
             
-            # 제스처 인식
-            gesture = self.gesture_detector.detect(landmarks_list)
+            # 제스처 인식 (리스트 반환)
+            gestures = self.gesture_detector.detect(landmarks_list)
             
             # 시그널 발생 (비동기로 UI 업데이트)
-            self.gesture_detected.emit(gesture)
+            # 리스트의 각 제스처에 대해 시그널 발생
+            for gesture in gestures:
+                if gesture != "NONE":
+                    self.gesture_detected.emit(gesture)
             
             # 프레임을 QPixmap으로 변환하여 UI에 전달
             # annotated_frame이 None이면 원본 frame 사용
@@ -161,7 +164,7 @@ class GestureManager(QThread):
         Args:
             mode: 모드 이름 ("COMMON", "PPT", "YOUTUBE")
         """
-        if mode in ["COMMON", "PPT", "YOUTUBE"]:
+        if mode in ["COMMON", "PPT", "YOUTUBE", "GAME"]:
             self.current_mode = mode
             # GestureDetector의 모드 변경 (시퀀스 버퍼도 자동 초기화됨)
             self.gesture_detector.set_mode(mode)
