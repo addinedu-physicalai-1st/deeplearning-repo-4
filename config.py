@@ -16,7 +16,7 @@ MODELS_DIR = os.path.join(_ROOT, "app", "models")
 DATA_DIR = os.path.join(_ROOT, "app", "data")
 
 # 웹캠 설정
-CAMERA_INDEX = 0
+CAMERA_INDEX = 1
 CAMERA_WIDTH = 640
 CAMERA_HEIGHT = 480
 CAMERA_FPS = 30
