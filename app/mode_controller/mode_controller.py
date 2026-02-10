@@ -8,8 +8,11 @@ from typing import Literal
 from PyQt6.QtCore import QObject, pyqtSignal
 from pynput.keyboard import Controller as KeyController, Key
 
+<<<<<<< HEAD
 import config
 
+=======
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
 ModeName = Literal["PPT", "YOUTUBE", "GAME"]
 
 
@@ -29,6 +32,7 @@ class ModeController(QObject):
         self._last_game_keys: set = set()
 
     def _build_gesture_mapping(self) -> dict[tuple[str, str], object]:
+<<<<<<< HEAD
         """config.GESTURE_ACTION_MAP에서 매핑을 로드하고 문자열 키를 pynput Key 객체로 변환."""
         mapping = {}
         for mode, gestures in config.GESTURE_ACTION_MAP.items():
@@ -48,6 +52,31 @@ class ModeController(QObject):
         except AttributeError:
             # 매칭되는 특수 키가 없으면 문자 그대로 반환
             return key_str
+=======
+        """(mode, gesture_name) -> pynput Key 또는 문자. Game은 방향키(↑↓←→)."""
+        return {
+            # PPT: 다음/이전 슬라이드 (한손 주먹 + 좌/우 슬라이드)
+            ("PPT", "next"): Key.right,
+            ("PPT", "prev"): Key.left,
+            ("PPT", "next_slide"): Key.right,
+            ("PPT", "prev_slide"): Key.left,
+            # YouTube
+            ("YOUTUBE", "play_pause"): Key.space,
+            ("YOUTUBE", "forward"): Key.right,
+            ("YOUTUBE", "backward"): Key.left,
+            ("YOUTUBE", "mute"): "m",
+            ("YOUTUBE", "fullscreen"): "f",
+            # Game: 방향키 (크롬 등에서 방향키로 동작하는 게임 제어)
+            ("GAME", "forward"): Key.up,
+            ("GAME", "back"): Key.down,
+            ("GAME", "left"): Key.left,
+            ("GAME", "right"): Key.right,
+            ("GAME", "직진"): Key.up,
+            ("GAME", "후진"): Key.down,
+            ("GAME", "좌회전"): Key.left,
+            ("GAME", "우회전"): Key.right,
+        }
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
 
     def set_mode(self, mode: ModeName) -> None:
         if mode in self.VALID_MODES:
@@ -77,6 +106,7 @@ class ModeController(QObject):
             pass
         self._last_game_keys = set()
 
+<<<<<<< HEAD
     def on_gesture(self, gesture_name: str, _cooldown_until: float = 0.0, _probs: dict = None) -> None:
         """모드별 감지(ppt/game 등)에서 인식된 제스처 시 호출. 현재 모드 기준으로 pynput 키 입력.
         gesture_name에 '|'가 있으면 복수 제스처(예: 'forward|right')로 해석.
@@ -90,6 +120,20 @@ class ModeController(QObject):
         keys = []
         for name in names:
             key = self._gesture_to_key.get((self._mode, name))
+=======
+    def on_gesture(self, gesture_name: str) -> None:
+        """모드별 감지(ppt/game 등)에서 인식된 제스처 시 호출. 현재 모드 기준으로 pynput 키 입력.
+        gesture_name에 '|'가 있으면 복수 제스처(예: 'forward|right')로 해석.
+        GAME 모드: 방향이 바뀔 때만 즉시 이전 키 release 후 새 키 press (macOS Key Sticky 방지)."""
+        if not self._is_detecting:
+            return
+        names = [s.strip() for s in (gesture_name or "").split("|") if s.strip()]
+        keys = []
+        for name in names:
+            key = self._gesture_to_key.get((self._mode, name))
+            if key is None:
+                key = self._gesture_to_key.get((self._mode, name.lower()))
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
             if key is not None:
                 keys.append(key)
 

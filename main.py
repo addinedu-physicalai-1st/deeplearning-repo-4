@@ -17,10 +17,13 @@ from app.workers import (
     play_mode_sound,
     start_playback_worker,
     stop_playback_worker,
+<<<<<<< HEAD
     play_aot_on,
     play_aot_off,
     play_gesture_success,
     play_app_startup,
+=======
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
 )
 
 
@@ -29,6 +32,7 @@ def main():
     app.setApplicationName(config.APP_NAME)
     app.setApplicationVersion(config.APP_VERSION)
 
+<<<<<<< HEAD
     # Global Font Registration
     from PyQt6.QtGui import QFontDatabase
     import os
@@ -36,10 +40,13 @@ def main():
     if os.path.exists(font_path):
         QFontDatabase.addApplicationFont(font_path)
 
+=======
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
     window = MainWindow()
     mode_controller = ModeController(initial_mode="GAME")
     camera = CameraWorker()
     trigger = TriggerWorker()
+<<<<<<< HEAD
     mode_detection = ModeDetectionWorker(
         get_current_mode=mode_controller.get_mode,
         get_sensitivity=lambda: window.sensitivity,
@@ -51,6 +58,14 @@ def main():
     window.mode_changed.connect(play_mode_sound)  # 모드 전환 시 해당 모드 효과음 재생
     mode_controller.set_mode(window.current_mode)
     trigger.set_current_mode(window.current_mode) # 초기 모드 설정
+=======
+    mode_detection = ModeDetectionWorker(get_current_mode=mode_controller.get_mode)
+
+    # UI → Mode Controller
+    window.mode_changed.connect(mode_controller.set_mode)
+    window.mode_changed.connect(play_mode_sound)  # 모드 전환 시 해당 모드 효과음 재생
+    mode_controller.set_mode(window.current_mode)
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
     # 시작/종료 버튼 클릭 → mode_controller 경유 (상태·UI·사운드 일원화)
     window.toggle_detection_requested.connect(
         lambda: mode_controller.set_detection_state(not mode_controller.get_is_detecting())
@@ -63,10 +78,17 @@ def main():
 
     trigger.frame_annotated.connect(on_frame_annotated)
 
+<<<<<<< HEAD
     # 카메라 → 공통 트리거 (모션 감지 시작/종료 제스처 확인)
     camera.frame_bgr_ready.connect(trigger.enqueue_frame)
 
     # 카메라 → 모드별 감지 (모션 감지 중일 때만 현재 모드 제스처 인식)
+=======
+    # 카메라 → 공통 트리거 (모션 감지 시작/종료: 양손 펴기/주먹)
+    camera.frame_bgr_ready.connect(trigger.enqueue_frame)
+
+    # 카메라 → 모드별 감지 (모션 감지 중일 때만, 현재 모드에 해당하는 제스처/자세)
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
     def on_frame_bgr(frame_bgr):
         if mode_controller.get_is_detecting():
             mode_detection.enqueue_frame(frame_bgr)
@@ -76,6 +98,7 @@ def main():
     # 트리거 → Mode Controller (모션 감지 시작/정지)
     trigger.trigger_start.connect(lambda: mode_controller.set_detection_state(True))
     trigger.trigger_stop.connect(lambda: mode_controller.set_detection_state(False))
+<<<<<<< HEAD
 
     # 트리거 → Always on Top 제어
     trigger.trigger_aot_on.connect(lambda: window.set_always_on_top(True))
@@ -89,6 +112,11 @@ def main():
     mode_controller.detection_state_changed.connect(window.set_detection_state)
 
     # Mode Controller → TriggerWorker (버튼으로 시작/종료 시 랜드마크 렌더링 상태 동기화)
+=======
+    # Mode Controller → UI (감지 상태 반영)
+    mode_controller.detection_state_changed.connect(window.set_detection_state)
+    # Mode Controller → TriggerWorker (버튼으로 시작/종료 시 랜드마크 스타일 동기화)
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
     mode_controller.detection_state_changed.connect(trigger.set_motion_active)
     # 감지 시작/정지 시 효과음
     def on_detection_state_changed(is_active: bool):
@@ -101,6 +129,7 @@ def main():
     # 모드별 감지 → Mode Controller (제스처 시 pynput 출력) + UI (인식된 제스처 표시)
     mode_detection.gesture_detected.connect(mode_controller.on_gesture)
     mode_detection.gesture_detected.connect(window.update_gesture)
+<<<<<<< HEAD
     
     # 제스처 인식 성공 시 효과음 (연속 호출 방지 로직 포함)
     last_played_gesture = [None]  # Closure-based state
@@ -116,6 +145,8 @@ def main():
             last_played_gesture[0] = gesture
 
     mode_detection.gesture_detected.connect(on_gesture_detected)
+=======
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
 
     # 카메라 오류
     def on_camera_error(msg):
@@ -140,7 +171,10 @@ def main():
     app.aboutToQuit.connect(on_quit)
 
     window.show()
+<<<<<<< HEAD
     play_app_startup()
+=======
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
     sys.exit(app.exec())
 
 

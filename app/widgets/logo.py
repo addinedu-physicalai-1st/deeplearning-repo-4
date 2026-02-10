@@ -3,7 +3,11 @@
 """
 
 import os
+<<<<<<< HEAD
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel, QSizePolicy
+=======
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap, QFont
 
@@ -23,6 +27,7 @@ class LogoWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         logo_path = os.path.join(config.ASSETS_DIR, "gesto-light.png")
         if os.path.exists(logo_path):
+<<<<<<< HEAD
             self.logo_label = QLabel()
             pixmap = QPixmap(logo_path)
             # 오리지널 로고 크기 설정
@@ -38,4 +43,22 @@ class LogoWidget(QWidget):
             self.logo_text.setStyleSheet(f"color: {config.COLOR_PRIMARY};")
             self.logo_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
             layout.addWidget(self.logo_text)
+=======
+            logo_label = QLabel()
+            pixmap = QPixmap(logo_path)
+            scaled_pixmap = pixmap.scaled(
+                180, 60,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+            logo_label.setPixmap(scaled_pixmap)
+            logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(logo_label)
+        else:
+            logo_text = QLabel(config.APP_NAME)
+            logo_text.setFont(QFont("Arial", 18, QFont.Weight.Bold))
+            logo_text.setStyleSheet(f"color: {config.COLOR_PRIMARY};")
+            logo_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(logo_text)
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
         self.setLayout(layout)

@@ -3,7 +3,10 @@
 """
 
 import os
+<<<<<<< HEAD
 import time as _time
+=======
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
 import queue
 import shutil
 import subprocess
@@ -31,7 +34,10 @@ except ImportError:
 
 _players: list = []
 _worker: Optional["SoundPlaybackWorker"] = None
+<<<<<<< HEAD
 _last_play_time: float = 0.0
+=======
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
 
 
 def start_playback_worker() -> None:
@@ -54,11 +60,16 @@ def stop_playback_worker() -> None:
 
 def play_trigger_start() -> None:
     """모션 감지 시작 효과음 재생."""
+<<<<<<< HEAD
     _enqueue_play(config.ASSETS_DIR, "motion-trigger.wav", volume=0.7)
+=======
+    _enqueue_play(config.ASSETS_DIR, "motion-trigger-start.mp3")
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
 
 
 def play_trigger_stop() -> None:
     """모션 감지 종료 효과음 재생."""
+<<<<<<< HEAD
     _enqueue_play(config.ASSETS_DIR, "motion-trigger.wav", volume=0.6)
 
 
@@ -143,6 +154,49 @@ def _play_qt(path: str, volume: float = 1.0) -> None:
                     if p == player:
                         _players.remove((p, a))
                         break
+=======
+    _enqueue_play(config.ASSETS_DIR, "motion-trigger-stop.mp3")
+
+
+def play_mode_sound(mode: str) -> None:
+    """모드 전환 시 해당 모드 효과음 재생 (PPT / YOUTUBE / GAME)."""
+    mode_upper = (mode or "").upper()
+    filename = f"mode-{mode_upper.lower()}.mp3"
+    _enqueue_play(config.ASSETS_DIR, filename)
+
+
+def _enqueue_play(assets_dir: str, filename: str) -> None:
+    path = os.path.join(assets_dir, filename)
+    if not os.path.isfile(path):
+        return
+    if _worker is not None:
+        _worker.enqueue(path)
+    else:
+        _play_mp3(path)
+
+
+def _play_mp3(path: str) -> None:
+    if not os.path.isfile(path):
+        return
+    if _Player is not None and _AudioOutput is not None and _QUrl is not None:
+        _play_qt(path)
+    else:
+        _play_subprocess(path)
+
+
+def _play_qt(path: str) -> None:
+    try:
+        player = _Player()
+        audio_output = _AudioOutput()
+        player.setAudioOutput(audio_output)
+        player.setSource(_QUrl.fromLocalFile(path))
+        player.play()
+        _players.append(player)
+
+        def _cleanup():
+            try:
+                _players.remove(player)
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
             except ValueError:
                 pass
 
@@ -153,11 +207,16 @@ def _play_qt(path: str, volume: float = 1.0) -> None:
         _play_subprocess(path)
 
 
+<<<<<<< HEAD
 def _play_subprocess(path: str, volume: float = 1.0) -> None:
+=======
+def _play_subprocess(path: str) -> None:
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
     """시스템 플레이어 (macOS afplay, Ubuntu ffplay 등)."""
     cmd: Optional[list[str]] = None
     if sys.platform == "darwin":
         if shutil.which("afplay"):
+<<<<<<< HEAD
             # afplay volume is 0 to 255ish but 1.0 is standard
             cmd = ["afplay", "-v", str(volume), path]
     elif sys.platform == "linux":
@@ -168,6 +227,14 @@ def _play_subprocess(path: str, volume: float = 1.0) -> None:
             cmd = ["aplay", "-q", path] # aplay doesn't have easy volume flag
         elif shutil.which("mpg123"):
             cmd = ["mpg123", "-q", "-f", str(int(volume * 32768)), path]
+=======
+            cmd = ["afplay", path]
+    elif sys.platform == "linux":
+        if shutil.which("ffplay"):
+            cmd = ["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", path]
+        elif shutil.which("mpg123"):
+            cmd = ["mpg123", "-q", path]
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
     if cmd:
         try:
             subprocess.Popen(
@@ -185,18 +252,28 @@ class SoundPlaybackWorker(QThread):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+<<<<<<< HEAD
         self._path_queue: queue.Queue[Optional[tuple[str, float]]] = queue.Queue(maxsize=32)
         self._running = True
 
     def enqueue(self, path: str, volume: float = 1.0) -> None:
         try:
             self._path_queue.put_nowait((path, volume))
+=======
+        self._path_queue: queue.Queue[Optional[str]] = queue.Queue(maxsize=32)
+        self._running = True
+
+    def enqueue(self, path: str) -> None:
+        try:
+            self._path_queue.put_nowait(path)
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
         except queue.Full:
             pass
 
     def run(self) -> None:
         while self._running:
             try:
+<<<<<<< HEAD
                 item = self._path_queue.get(timeout=0.2)
             except queue.Empty:
                 continue
@@ -204,6 +281,14 @@ class SoundPlaybackWorker(QThread):
                 break
             path, volume = item
             _play_mp3(path, volume)
+=======
+                path = self._path_queue.get(timeout=0.2)
+            except queue.Empty:
+                continue
+            if path is None:
+                break
+            _play_subprocess(path)
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
 
     def stop(self) -> None:
         self._running = False

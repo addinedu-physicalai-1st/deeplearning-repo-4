@@ -1,5 +1,6 @@
 """
 YouTube 모드 전용 감지.
+<<<<<<< HEAD
 app/models/의 lstm_legacy.tflite 사용. LSTM 6종 제스처 (Pinch 좌/우 분리).
 - Swipe_Left → 10초 뒤로, Swipe_Right → 10초 앞으로
 - Pinch_In_Left/Right → 음소거, Pinch_Out_Left/Right → 재생/정지
@@ -38,3 +39,20 @@ class YouTubeDetector:
         if self._base is not None:
             self._base.close()
             self._base = None
+=======
+(추후: 재생/정지, 10초 앞/뒤, 음소거, 전체화면 등)
+"""
+
+from typing import Optional
+
+
+class YouTubeDetector:
+    """YouTube 모드: 재생/정지, 빨리감기 등 제스처 감지 (추후 구현)."""
+
+    def process(self, frame_bgr) -> Optional[str]:
+        # TODO: MediaPipe + 규칙/LSTM으로 YouTube 제스처 인식
+        return None
+
+    def close(self) -> None:
+        pass
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311

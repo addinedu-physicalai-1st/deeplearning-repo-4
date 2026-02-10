@@ -6,11 +6,16 @@
 """
 
 from app.recognition.trigger import PostureTriggerDetector, TriggerResult
+<<<<<<< HEAD
+=======
+from app.workers import TriggerWorker, ModeDetectionWorker
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
 from app.recognition.ppt import PPTDetector
 from app.recognition.youtube import YouTubeDetector
 from app.recognition.game import GameDetector
 from app.recognition.registry import get_mode_detector
 
+<<<<<<< HEAD
 def __getattr__(name):
     if name == "TriggerWorker":
         from app.workers.trigger_worker import TriggerWorker
@@ -20,6 +25,8 @@ def __getattr__(name):
         return ModeDetectionWorker
     raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
+=======
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
 __all__ = [
     "PostureTriggerDetector",
     "TriggerResult",

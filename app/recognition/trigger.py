@@ -1,9 +1,16 @@
 import os
 import time
 from enum import Enum
+<<<<<<< HEAD
 from types import SimpleNamespace
 
 import cv2
+=======
+
+import cv2
+from mediapipe.tasks import python as mp_tasks
+from mediapipe.tasks.python import vision
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
 import mediapipe as mp
 
 import config
@@ -16,15 +23,22 @@ HAND_CONNECTIONS = [
 ]
 
 # 같은 포즈를 이만큼 유지해야 트리거 발생 (초)
+<<<<<<< HEAD
 TRIGGER_HOLD_DURATION_SEC = 2.0
+=======
+TRIGGER_HOLD_DURATION_SEC = 1.0
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
 
 
 class TriggerResult(str, Enum):
     NONE = "none"
     START = "start"   # 양손 펴기 + 손바닥 정면 + 위 방향
     STOP = "stop"     # 양손 주먹 + 손바닥 정면 + 위 방향
+<<<<<<< HEAD
     ALWAYS_ON_TOP_ON = "aot_on"   # 한 손 검지 위로
     ALWAYS_ON_TOP_OFF = "aot_off" # 한 손 검지 아래로
+=======
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
 
 # 랜드마크 인덱스 정의
 WRIST = 0
@@ -54,6 +68,14 @@ def _get_hand_state(landmarks):
     손가락 마디의 Y좌표를 비교하여 상태 판별.
     카메라 좌표계에서 위쪽일수록 y값이 작음.
     """
+<<<<<<< HEAD
+=======
+    # 1. 손끝이 위를 향하는지 확인 (손목보다 중지 뿌리가 위에 있어야 함)
+    # 최소한 손이 수직으로 세워져 있는 상태인지 체크
+    if landmarks[MIDDLE_MCP].y > landmarks[WRIST].y:
+        return "IGNORE"
+
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
     # 2. 손가락 펴짐 여부 확인 (MCP와 TIP의 Y좌표 비교)
     # 팁(TIP)이 뿌리(MCP)보다 위에(y값이 작게) 있으면 펴진 것으로 간주
     fingers_tip = [INDEX_TIP, MIDDLE_TIP, RING_TIP, PINKY_TIP]
@@ -65,6 +87,7 @@ def _get_hand_state(landmarks):
 
     # 보 (모든 손가락이 펴짐)
     if open_count >= 4:
+<<<<<<< HEAD
         # 방향 체크 (MCP가 손목보다 위에 있을 때만 모션인식 시작용)
         if landmarks[MIDDLE_MCP].y < landmarks[WRIST].y:
             return "OPEN"
@@ -89,6 +112,15 @@ def _get_hand_state(landmarks):
         if index_extended: return "INDEX_UP"
         if index_pointing_down: return "INDEX_DOWN"
 
+=======
+        return "OPEN"
+    # 주먹: 모든 손가락이 접혀 있고, PIP가 TIP보다 위에 있어야 함 (손바닥이 보이도록)
+    if open_count == 0:
+        pip_above_tip = all(landmarks[pip].y < landmarks[tip].y for pip, tip in zip(pips, fingers_tip))
+        if pip_above_tip:
+            return "FIST"
+    
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
     return "IGNORE"
 
 def _draw_landmarks_on_frame(frame_bgr, result, motion_active: bool):
@@ -98,6 +130,7 @@ def _draw_landmarks_on_frame(frame_bgr, result, motion_active: bool):
     h, w = frame_bgr.shape[:2]
 
     if motion_active:
+<<<<<<< HEAD
         # BRAND THEME: Cyan connections, Magenta joints
         color_core = (255, 255, 255)    # Pure White core for skin contrast
         glow_conn = (255, 230, 0)       # Neon Cyan (BGR)
@@ -132,10 +165,27 @@ def _draw_landmarks_on_frame(frame_bgr, result, motion_active: bool):
 class PostureTriggerDetector:
     """mp.solutions.hands (Solution API) 기반 트리거 감지."""
 
+=======
+        color = (255, 200, 100)  # BGR 밝은 파랑 (모션 인식 중)
+        thickness = 3
+    else:
+        color = (160, 160, 160)  # BGR 회색 (대기)
+        thickness = 1
+
+    for hand_landmarks in result.hand_landmarks:
+        pts = [(int(lm.x * w), int(lm.y * h)) for lm in hand_landmarks]
+        for pt in pts:
+            cv2.circle(frame_bgr, pt, 4, color, -1)
+        for i, j in HAND_CONNECTIONS:
+            cv2.line(frame_bgr, pts[i], pts[j], color, thickness)
+
+class PostureTriggerDetector:
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
     def __init__(self, hold_duration_sec: float = TRIGGER_HOLD_DURATION_SEC):
         self._hold_duration_sec = hold_duration_sec
         self._hold_candidate: TriggerResult | None = None
         self._hold_since: float = 0.0
+<<<<<<< HEAD
         self._mp_hands = mp.solutions.hands
         self._hands = self._mp_hands.Hands(
             static_image_mode=False,
@@ -153,10 +203,33 @@ class PostureTriggerDetector:
 
     def _result_to_trigger(self, result, motion_active: bool) -> TriggerResult:
         if not result.hand_landmarks:
+=======
+        # 환경에 맞춰 config.MODELS_DIR 사용
+        model_path = os.path.join(config.MODELS_DIR, "hand_landmarker.task")
+        base_options = mp_tasks.BaseOptions(model_asset_path=model_path)
+        options = vision.HandLandmarkerOptions(
+            base_options=base_options,
+            num_hands=2,
+            min_hand_detection_confidence=0.7, # 정확도를 위해 상향
+            min_hand_presence_confidence=0.7,
+            min_tracking_confidence=0.7,
+        )
+        self._landmarker = vision.HandLandmarker.create_from_options(options)
+
+    def _detect(self, frame_bgr):
+        rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+        return self._landmarker.detect(mp_image)
+
+    def _result_to_trigger(self, result, motion_active: bool) -> TriggerResult:
+        # 반드시 두 손이 다 보여야 함
+        if not result.hand_landmarks or len(result.hand_landmarks) < 2:
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
             return TriggerResult.NONE
 
         hands = result.hand_landmarks
         hand_states = [_get_hand_state(h) for h in hands]
+<<<<<<< HEAD
         
         # Always on Top: ONE hand is enough
         if "INDEX_UP" in hand_states:
@@ -168,6 +241,8 @@ class PostureTriggerDetector:
         if len(hands) < 2:
             return TriggerResult.NONE
 
+=======
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
         palm_facing = [_is_palm_facing_camera(h) for h in hands]
         both_palm = palm_facing[0] and palm_facing[1]
 
@@ -215,6 +290,11 @@ class PostureTriggerDetector:
         return trigger, annotated
 
     def close(self):
+<<<<<<< HEAD
         if self._hands:
             self._hands.close()
             self._hands = None
+=======
+        if self._landmarker:
+            self._landmarker.close()
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311

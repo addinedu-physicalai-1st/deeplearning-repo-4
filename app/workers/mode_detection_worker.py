@@ -10,13 +10,17 @@ from typing import Callable, Optional
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
+<<<<<<< HEAD
 import config
+=======
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
 from app.recognition.registry import get_mode_detector
 
 
 class ModeDetectionWorker(QThread):
     """모션 감지 중일 때만 프레임을 받아, 현재 모드 감지기로 제스처/자세 판별. gesture_detected 시그널."""
 
+<<<<<<< HEAD
     gesture_detected = pyqtSignal(str, float, float)  # (gesture_name, confidence, cooldown_until_monotonic)
     # GESTURE_DEBUG 시 제스처별 확률·threshold 표시용 (매 프레임 LSTM 추론 후 emit)
     gesture_debug_updated = pyqtSignal(dict, float)  # (probs, threshold)
@@ -35,6 +39,17 @@ class ModeDetectionWorker(QThread):
         super().__init__(parent)
         self._get_current_mode = get_current_mode
         self._get_sensitivity = get_sensitivity
+=======
+    gesture_detected = pyqtSignal(str)
+
+    def __init__(self, get_current_mode: Callable[[], str], parent=None):
+        """
+        Args:
+            get_current_mode: 현재 모드(PPT/YOUTUBE/GAME)를 반환하는 콜백. 메인에서 mode_controller.get_mode 등.
+        """
+        super().__init__(parent)
+        self._get_current_mode = get_current_mode
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
         # 최신 1프레임만 유지: 큐가 쌓이면 지연된 동작 발생 → maxsize=1, Full 시 구식 프레임 폐기
         self._frame_queue = queue.Queue(maxsize=1)
         self._running = True
@@ -67,6 +82,7 @@ class ModeDetectionWorker(QThread):
             if mode != last_mode:
                 if self._detector is not None:
                     self._detector.close()
+<<<<<<< HEAD
                 get_threshold = None
                 if self._get_sensitivity is not None:
                     get_threshold = lambda: config.sensitivity_to_confidence_threshold(
@@ -94,6 +110,14 @@ class ModeDetectionWorker(QThread):
                         else 0.0
                     )
                     self.gesture_debug_updated.emit(probs, thr)
+=======
+                self._detector = get_mode_detector(mode)
+                last_mode = mode
+            if self._detector is not None:
+                gesture = self._detector.process(frame)
+                # GAME 모드: 빈 제스처도 emit하여 방향 해제(release) 가능하도록 함
+                self.gesture_detected.emit(gesture or "")
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
         if self._detector is not None:
             self._detector.close()
             self._detector = None

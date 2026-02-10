@@ -1,11 +1,16 @@
 """
+<<<<<<< HEAD
 main_window.py
 메인 윈도우 (UI 전용) - V4 Design
 Frameless window with custom top bar, AR-style layout, and Chroma aesthetics.
+=======
+메인 윈도우 (UI 전용)
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
 """
 
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+<<<<<<< HEAD
     QLabel, QPushButton, QFrame, QSizePolicy, QSizeGrip,
     QDialog, QComboBox, QFormLayout, QApplication, QSlider,
     QGraphicsOpacityEffect, QMenu, QGridLayout
@@ -359,11 +364,25 @@ class CustomTopBar(QWidget):
         """Always on Top 활성화 상태 표시기 업데이트"""
         self.aot_container.setVisible(enabled)
             
+=======
+    QStatusBar, QScrollArea
+)
+from PyQt6.QtCore import Qt, pyqtSignal
+
+import config
+from app.widgets import LogoWidget, WebcamPanelWidget, ControlPanelWidget
+
+
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
 class MainWindow(QMainWindow):
     start_detection = pyqtSignal()
     stop_detection = pyqtSignal()
     sensitivity_changed = pyqtSignal(int)
     mode_changed = pyqtSignal(str)
+<<<<<<< HEAD
+=======
+    # 사용자가 시작/종료 버튼 클릭 시 (main에서 mode_controller 경유로 연결)
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
     toggle_detection_requested = pyqtSignal()
 
     def __init__(self):
@@ -371,6 +390,7 @@ class MainWindow(QMainWindow):
         self.current_mode = "GAME"
         self.sensitivity = config.SENSITIVITY_DEFAULT
         self.is_detecting = False
+<<<<<<< HEAD
         
         self._dragging = False
         self._resizing = False
@@ -872,10 +892,61 @@ class MainWindow(QMainWindow):
                
         self.setGeometry(new_geo)
     
+=======
+
+        self.init_ui()
+
+    def init_ui(self):
+        self.setWindowTitle(config.WINDOW_TITLE)
+        self.setGeometry(100, 100, config.WINDOW_WIDTH, config.WINDOW_HEIGHT)
+        self.setStyleSheet(f"background-color: {config.COLOR_BACKGROUND};")
+
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout()
+        main_layout.setSpacing(20)
+        main_layout.setContentsMargins(30, 30, 30, 30)
+
+        content_layout = QHBoxLayout()
+        content_layout.setSpacing(20)
+        self.webcam_panel = WebcamPanelWidget()
+        content_layout.addWidget(self.webcam_panel, 2)
+
+        right_content = QWidget()
+        right_layout = QVBoxLayout(right_content)
+        right_layout.setSpacing(15)
+        right_layout.addWidget(LogoWidget())
+        self.control_panel = ControlPanelWidget()
+        right_layout.addWidget(self.control_panel)
+        right_layout.addStretch()
+        scroll = QScrollArea()
+        scroll.setWidget(right_content)
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        content_layout.addWidget(scroll, 1)
+
+        main_layout.addLayout(content_layout)
+        self.status_bar = QStatusBar()
+        self.status_bar.setStyleSheet(f"background-color: {config.COLOR_BACKGROUND}; color: {config.COLOR_TEXT_SECONDARY};")
+        self.status_bar.showMessage("준비됨")
+        self.setStatusBar(self.status_bar)
+        central_widget.setLayout(main_layout)
+
+        self.control_panel.game_radio.setChecked(True)
+
+        self.control_panel.mode_changed.connect(self.on_mode_changed)
+        self.control_panel.sensitivity_changed.connect(self.on_sensitivity_changed)
+        self.control_panel.toggle_clicked.connect(self.on_toggle_clicked)
+
+    def closeEvent(self, event):
+        event.accept()
+
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
     def set_detection_state(self, is_active: bool):
         self.is_detecting = is_active
         self.control_panel.set_detection_state(is_active)
         self.webcam_panel.set_recording(is_active)
+<<<<<<< HEAD
         
         self.top_bar.set_status(is_active, self.current_mode)
         if is_active:
@@ -889,19 +960,36 @@ class MainWindow(QMainWindow):
             self.stop_detection.emit()
 
     def on_toggle_clicked(self):
+=======
+        if is_active:
+            self.status_bar.showMessage("제스처 인식 시작됨")
+            self.webcam_panel.gesture_display.update_status("감지 중", None)
+            self.start_detection.emit()
+        else:
+            self.status_bar.showMessage("제스처 인식 중지됨")
+            self.webcam_panel.gesture_display.update_status("대기 중", None)
+            self.stop_detection.emit()
+
+    def on_toggle_clicked(self):
+        """버튼 클릭 시 토글 요청만 시그널로 보냄. 실제 상태·사운드는 main에서 mode_controller 경유."""
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
         self.toggle_detection_requested.emit()
 
     def on_sensitivity_changed(self, value: int):
         self.sensitivity = value
         self.control_panel.set_sensitivity_label(value)
+<<<<<<< HEAD
         self.webcam_panel.gesture_display.set_threshold(
             config.sensitivity_to_confidence_threshold(value)
         )
+=======
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
         self.sensitivity_changed.emit(value)
 
     def on_mode_changed(self, mode: str):
         self.current_mode = mode
         self.mode_changed.emit(mode)
+<<<<<<< HEAD
         
         # Sync TriggerWorker mode
         if hasattr(self, 'trigger_worker'):
@@ -939,3 +1027,28 @@ class MainWindow(QMainWindow):
 
         if self.is_detecting:
             if gesture_name: self.top_bar.update_gesture(gesture_name)
+=======
+        self.status_bar.showMessage(f"{mode} 모드로 전환됨")
+
+    def update_webcam_frame(self, pixmap):
+        """웹캠 프레임 표시 (백엔드 연결 시 사용)."""
+        if pixmap and not pixmap.isNull():
+            label_size = self.webcam_panel.webcam_label.size()
+            if label_size.width() > 0 and label_size.height() > 0:
+                scaled_pixmap = pixmap.scaled(
+                    label_size,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation
+                )
+            else:
+                scaled_pixmap = pixmap
+            if scaled_pixmap and not scaled_pixmap.isNull():
+                self.webcam_panel.webcam_label.setPixmap(scaled_pixmap)
+                if self.webcam_panel.webcam_label.text():
+                    self.webcam_panel.webcam_label.setText("")
+
+    def update_gesture(self, gesture_name: str):
+        """인식된 제스처 표시 (백엔드 연결 시 사용)."""
+        if self.is_detecting:
+            self.webcam_panel.gesture_display.update_status("감지 중", gesture_name)
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311

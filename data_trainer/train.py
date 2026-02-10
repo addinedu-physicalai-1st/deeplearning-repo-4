@@ -1,5 +1,8 @@
 import os
+<<<<<<< HEAD
 import shutil
+=======
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
@@ -13,6 +16,7 @@ from sklearn.metrics import classification_report, confusion_matrix
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+<<<<<<< HEAD
 # 경로 설정 (data_collector/data 아래 Gesture, Posture 폴더에서 로드)
 DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data_collector', 'data'))
 MODELS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), 'models'))
@@ -51,6 +55,75 @@ def load_data(data_dir, apply_normalization=True):
     """
     특정 디렉토리(legacy 또는 tasks)에서 데이터를 로드합니다.
     구조: data_dir/Gesture/<폴더명>/*.npy, data_dir/Posture/<폴더명>/*.npy — 폴더명이 라벨.
+=======
+# 경로 설정
+DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data_collector', 'data'))
+LEGACY_DATA_DIR = os.path.join(DATA_DIR, 'legacy')
+MODELS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), 'models'))
+
+# 하이퍼파라미터
+SEQUENCE_LENGTH = 45  # 1.5초 * 30fps
+LANDMARKS_COUNT = 21
+COORDS_COUNT = 3
+INPUT_SHAPE = (SEQUENCE_LENGTH, LANDMARKS_COUNT * COORDS_COUNT)
+EPOCHS = 100  # Early stopping으로 실제로는 더 적게 학습될 수 있음
+BATCH_SIZE = 16
+
+def normalize_landmarks(data):
+    """
+    랜드마크 정규화: 손목(랜드마크 0)을 기준으로 상대 좌표로 변환
+    
+    Args:
+        data: (frames, 21, 3) shape의 numpy array
+    
+    Returns:
+        정규화된 데이터 (frames, 21, 3)
+    """
+    # 손목 좌표를 기준으로 상대 좌표 변환
+    wrist = data[:, 0:1, :]  # (frames, 1, 3)
+    normalized = data - wrist  # 손목 기준 상대 좌표
+    
+    # 스케일 정규화 (손 크기 차이 보정)
+    scale = np.max(np.abs(normalized), axis=(1, 2), keepdims=True) + 1e-6
+    normalized = normalized / scale
+    
+    return normalized
+
+def augment_data(X, y, augmentation_factor=2):
+    """
+    데이터 증강: 노이즈 추가로 학습 데이터 증가
+    
+    Args:
+        X: 입력 데이터 (N, 45, 63)
+        y: 레이블 데이터 (N,)
+        augmentation_factor: 증강 배수 (기본 2배)
+    
+    Returns:
+        증강된 X, y
+    """
+    X_aug = []
+    y_aug = []
+    
+    for i in range(len(X)):
+        # 원본 데이터
+        X_aug.append(X[i])
+        y_aug.append(y[i])
+        
+        # 증강 버전들
+        for _ in range(augmentation_factor - 1):
+            # 가우시안 노이즈 추가
+            noise = np.random.normal(0, 0.01, X[i].shape)
+            X_aug.append(X[i] + noise)
+            y_aug.append(y[i])
+    
+    return np.array(X_aug), np.array(y_aug)
+
+def load_data(data_dir, apply_normalization=True):
+    """
+    특정 디렉토리(legacy 또는 tasks)에서 데이터를 로드합니다.
+    구조: data_dir/<Mode>/<GestureName>/*.npy
+    Mode는 무시하고 GestureName을 레이블로 사용합니다.
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
     
     Args:
         data_dir: 데이터 디렉토리 경로
@@ -68,13 +141,22 @@ def load_data(data_dir, apply_normalization=True):
         print(f"경고: 디렉토리 {data_dir}가 존재하지 않습니다.")
         return np.array(X), np.array(y), label_map
 
+<<<<<<< HEAD
     # 1) Gesture(·Posture) 하위 폴더명 = 라벨. 정렬해서 인덱스 고정.
     modes = ['Gesture', 'Posture']
     all_gestures = set()
+=======
+    # 알려진 모드 'Gesture'와 'Posture' 탐색
+    modes = ['Gesture', 'Posture']
+    
+    current_label_id = 0
+    
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
     for mode in modes:
         mode_path = os.path.join(data_dir, mode)
         if not os.path.exists(mode_path):
             continue
+<<<<<<< HEAD
         for name in os.listdir(mode_path):
             if os.path.isdir(os.path.join(mode_path, name)):
                 all_gestures.add(name)
@@ -92,12 +174,29 @@ def load_data(data_dir, apply_normalization=True):
                 continue
             label_id = label_map[gesture]
 
+=======
+            
+        gestures = os.listdir(mode_path)
+        for gesture in gestures:
+            gesture_path = os.path.join(mode_path, gesture)
+            if not os.path.isdir(gesture_path):
+                continue
+                
+            if gesture not in label_map:
+                label_map[gesture] = current_label_id
+                labels.append(gesture)
+                current_label_id += 1
+            
+            label_id = label_map[gesture]
+            
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
             # 모든 .npy 파일 로드
             for file in os.listdir(gesture_path):
                 if file.endswith('.npy'):
                     file_path = os.path.join(gesture_path, file)
                     try:
                         data = np.load(file_path)
+<<<<<<< HEAD
                         # 데이터 모양: (Frames, 21, 3) 또는 (Frames, 42, 3). 21이면 42로 패딩.
                         if data.shape[1] == 21:
                             pad = np.zeros((data.shape[0], 21, 3), dtype=data.dtype)
@@ -111,6 +210,23 @@ def load_data(data_dir, apply_normalization=True):
                         elif data.shape[0] < SEQUENCE_LENGTH:
                             padding = np.zeros((SEQUENCE_LENGTH - data.shape[0], LANDMARKS_COUNT, 3), dtype=data.dtype)
                             data = np.vstack((data, padding))
+=======
+                        # 데이터 모양은 (Frames, 21, 3)
+                        
+                        # 정규화 적용
+                        if apply_normalization:
+                            data = normalize_landmarks(data)
+                        
+                        # SEQUENCE_LENGTH 프레임을 갖도록 보장
+                        if data.shape[0] > SEQUENCE_LENGTH:
+                            data = data[:SEQUENCE_LENGTH]
+                        elif data.shape[0] < SEQUENCE_LENGTH:
+                            # 0으로 패딩
+                            padding = np.zeros((SEQUENCE_LENGTH - data.shape[0], 21, 3))
+                            data = np.vstack((data, padding))
+                        
+                        # 랜드마크 평탄화: (45, 21, 3) -> (45, 63)
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
                         data_flat = data.reshape(SEQUENCE_LENGTH, -1)
                         
                         X.append(data_flat)
@@ -120,6 +236,7 @@ def load_data(data_dir, apply_normalization=True):
                         
     return np.array(X), np.array(y), label_map
 
+<<<<<<< HEAD
 
 def print_class_distribution(y, label_map):
     """클래스별 샘플 수 출력 (불균형 확인용)."""
@@ -179,6 +296,8 @@ def audit_legacy_data(data_dir):
     print()
 
 
+=======
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
 def create_model(num_classes):
     """
     개선된 LSTM 모델 생성
@@ -187,6 +306,7 @@ def create_model(num_classes):
     - L2 정규화 추가 (일반화 성능 개선)
     """
     model = Sequential([
+<<<<<<< HEAD
         # 첫 레이어는 유닛을 넉넉히 주어 특징을 충분히 뽑습니다.
         LSTM(128, return_sequences=True, input_shape=INPUT_SHAPE),
         Dropout(0.2),
@@ -201,6 +321,16 @@ def create_model(num_classes):
         Dense(num_classes, activation='softmax')
     ])
         
+=======
+        LSTM(64, return_sequences=True, input_shape=INPUT_SHAPE),
+        Dropout(0.3),
+        LSTM(64, return_sequences=False),
+        Dropout(0.3),
+        Dense(32, activation='relu', kernel_regularizer=l2(0.01)),
+        Dense(num_classes, activation='softmax')
+    ])
+    
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
     model.compile(
         optimizer='Adam',
         loss='categorical_crossentropy',
@@ -319,7 +449,11 @@ def evaluate_model(model, X_test, y_test, label_map):
     
     return cm
 
+<<<<<<< HEAD
 def train_model(X, y, save_path, model_name, label_map=None):
+=======
+def train_model(X, y, save_path, model_name, apply_augmentation=True):
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
     """
     개선된 모델 학습 함수
     
@@ -328,7 +462,11 @@ def train_model(X, y, save_path, model_name, label_map=None):
         y: 레이블
         save_path: 모델 저장 경로
         model_name: 모델 이름
+<<<<<<< HEAD
         label_map: gesture_name -> label_id (평가 시 실제 이름 표시용)
+=======
+        apply_augmentation: 데이터 증강 적용 여부
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
     
     Returns:
         history, model
@@ -337,6 +475,15 @@ def train_model(X, y, save_path, model_name, label_map=None):
         print(f"{model_name}에 대한 데이터가 없어 학습을 건너뜁니다.")
         return None, None
 
+<<<<<<< HEAD
+=======
+    # 데이터 증강 (학습 데이터가 적을 경우 유용)
+    if apply_augmentation:
+        print("📈 데이터 증강 적용 중...")
+        X, y = augment_data(X, y, augmentation_factor=2)
+        print(f"   증강 후 데이터 개수: {len(X)}")
+
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
     # 클래스 가중치 계산 (클래스 불균형 처리)
     class_weights = compute_class_weight('balanced', classes=np.unique(y), y=y)
     class_weight_dict = dict(enumerate(class_weights))
@@ -404,6 +551,7 @@ def train_model(X, y, save_path, model_name, label_map=None):
     
     print(f"\n✅ {model_name} 저장 완료: {save_path}")
     
+<<<<<<< HEAD
     # 라벨 순서 저장 (앱에서 인덱스→이름 매핑용)
     labels_path = save_path.replace(".h5", "_labels.txt")
     sorted_labels = sorted(label_map.items(), key=lambda x: x[1])
@@ -421,6 +569,22 @@ def train_model(X, y, save_path, model_name, label_map=None):
     print("="*70)
     eval_label_map = label_map if label_map else {f"Class_{i}": i for i in range(num_classes)}
     evaluate_model(model, X_test, y_test, eval_label_map)
+=======
+    # TFLite 모델 저장
+    save_tflite_model(model, save_path)
+    
+    # 상세 평가
+    print("\n" + "="*70)
+    print("🔍 모델 평가 중...")
+    print("="*70)
+    
+    # label_map 재구성 (y에서 역으로 추출)
+    label_map = {}
+    for i in range(num_classes):
+        label_map[f"Class_{i}"] = i
+    
+    evaluate_model(model, X_test, y_test, label_map)
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
     
     return history, model
 
@@ -464,6 +628,7 @@ def main():
     print("="*70)
     
     print("\n📂 Legacy 데이터 로딩 중...")
+<<<<<<< HEAD
     print(f"   기대 입력 shape: (N, {SEQUENCE_LENGTH}, {LANDMARKS_COUNT * COORDS_COUNT}) = (N, 30, 126) [양손 42 랜드마크]")
     audit_legacy_data(DATA_DIR)
     X_legacy, y_legacy, label_map_legacy = load_data(DATA_DIR, apply_normalization=True)
@@ -472,11 +637,17 @@ def main():
         print(f"   ⚠️ 입력 shape 불일치: 기대 {INPUT_SHAPE}, 실제 {X_legacy.shape[1:]}")
     print_class_distribution(y_legacy, label_map_legacy)
 
+=======
+    X_legacy, y_legacy, label_map_legacy = load_data(LEGACY_DATA_DIR, apply_normalization=True)
+    print(f"✅ Legacy 데이터: {X_legacy.shape}, 클래스: {label_map_legacy}")
+    
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
     # Train Legacy
     if len(X_legacy) > 0:
         save_path = os.path.join(MODELS_DIR, 'lstm_legacy.h5')
         history, model = train_model(
             X_legacy, y_legacy, save_path, "Legacy Model",
+<<<<<<< HEAD
             label_map=label_map_legacy
         )
         
@@ -492,6 +663,11 @@ def main():
             else:
                 print(f"   ⚠️ 복사 생략 (없음): {src}")
 
+=======
+            apply_augmentation=True
+        )
+        
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
         # Plot training history
         if history:
             print("\n📈 학습 히스토리 시각화 중...")
@@ -503,12 +679,19 @@ def main():
         print(f"📁 저장된 파일:")
         print(f"   - {save_path}")
         print(f"   - {save_path.replace('.h5', '.tflite')}")
+<<<<<<< HEAD
         print(f"   - app/models/ (위 .tflite, _labels.txt 복사됨)")
+=======
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
         print(f"   - {os.path.join(MODELS_DIR, 'confusion_matrix.png')}")
         print(f"   - {os.path.join(MODELS_DIR, 'training_history.png')}")
         
     else:
+<<<<<<< HEAD
         print("❌ No data found. Please collect data first using collect_mp.py")
+=======
+        print("❌ No data found. Please collect data first using collect_mp_legacy.py")
+>>>>>>> d1bd67f5dcb6706aacd57c6cdd4a254dd5041311
 
 if __name__ == "__main__":
     main()
