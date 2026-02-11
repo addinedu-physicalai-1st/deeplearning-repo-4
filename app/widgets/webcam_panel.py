@@ -11,6 +11,7 @@ from PyQt6.QtGui import QFont
 import config
 from app.widgets.gesture_display import GestureDisplayWidget
 from app.widgets.neon_frame import NeonFrameWidget
+from app.widgets.holographic_overlay import HolographicOverlay
 
 
 class WebcamPanelWidget(QGroupBox):
@@ -52,6 +53,9 @@ class WebcamPanelWidget(QGroupBox):
         
         self.neon_frame = NeonFrameWidget(self.webcam_label)
         self.neon_frame.setMinimumSize(10, 10)
+        
+        self.holographic = HolographicOverlay(self.neon_frame)
+        
         self.cam_layout.addWidget(self.neon_frame)
         
         # Gesture Display Widget
@@ -79,6 +83,10 @@ class WebcamPanelWidget(QGroupBox):
                 new_h = int(w / target_ratio)
                 
             self.neon_frame.setFixedSize(new_w, new_h)
+            self.holographic.setFixedSize(new_w, new_h)
+
+    def set_locking(self, active: bool):
+        self.holographic.set_locking(active)
 
     def set_recording(self, active: bool):
         """Webcam indicator removed."""

@@ -47,6 +47,21 @@ class AccuracyGauge(QWidget):
         if not self._anim_timer.isActive():
             self._anim_timer.start()
 
+    def get_vfx_center(self) -> QPoint:
+        """게이지 링의 실제 시각적 중앙 좌표 반환 (메인 윈도우 VFX 좌표용)"""
+        w, h = self.width(), self.height()
+        label_height_ratio = 0.25
+        ring_area_height = h * (1.0 - label_height_ratio)
+        available_side = min(w, ring_area_height)
+        scale = available_side / 450.0
+        
+        side = available_side - (30 * scale)
+        x_offset = (w - side) / 2
+        y_offset = (ring_area_height - side) / 2 + (10 * scale)
+        
+        # 링 중앙 지점
+        return QPoint(int(x_offset + side/2), int(y_offset + side/2))
+
     def _animate_step(self):
         diff = self._target_accuracy - self._display_accuracy
         if abs(diff) < 0.5:

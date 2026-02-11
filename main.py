@@ -113,11 +113,15 @@ def main():
             if window.current_mode != "GAME":
                 play_gesture_success()
             last_played_gesture[0] = gesture
+            
+        # Wave fires whenever gesture is detected (active)
+        window.trigger_vfx()
 
     mode_detection.gesture_detected.connect(on_gesture_detected)
 
     # 카메라 오류
     camera.error_occurred.connect(lambda msg: window.statusBar().showMessage(msg))
+    camera.landmarks_updated.connect(window.on_landmarks_detected)
 
     # 카메라 소스 변경 핸들러
     def on_camera_source_changed(new_index):

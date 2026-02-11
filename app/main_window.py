@@ -10,9 +10,11 @@ from PyQt6.QtWidgets import (
     QDialog, QComboBox, QFormLayout, QApplication, QSlider,
     QGraphicsOpacityEffect, QMenu, QGridLayout
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QPoint, QRectF, QEvent, QSize, QTimer, QPropertyAnimation, pyqtProperty
+from PyQt6.QtCore import Qt, pyqtSignal, QPoint, QPointF, QRectF, QEvent, QSize, QTimer, QPropertyAnimation, pyqtProperty
 from PyQt6.QtGui import QColor, QFont, QFontDatabase, QPixmap, QAction, QIcon, QTransform, QPainter, QLinearGradient, QBrush, QPen
 
+import os
+import time
 import config
 from app.widgets import LogoWidget, WebcamPanelWidget, ControlPanelWidget
 from app.widgets.animated_background import AuroraGradientBackground
@@ -544,6 +546,7 @@ class MainWindow(QMainWindow):
         self._normal_size = QSize(800, 600) 
         self._drag_pos = None
         self._edge = None
+        self._last_vfx_time = 0.0
 
         self._last_scale = 0.0
         
@@ -596,6 +599,10 @@ class MainWindow(QMainWindow):
         central_widget = QWidget()
         central_widget.setObjectName("CentralWidget")
         central_widget.setMouseTracking(True) 
+        
+        # Enable Mouse Tracking for background parallax
+        self.setMouseTracking(True)
+        
         central_widget.setStyleSheet(f"""
             #CentralWidget {{
                 background: rgba(10, 10, 25, 140);
@@ -657,6 +664,45 @@ class MainWindow(QMainWindow):
         self.size_grip = QSizeGrip(self)
         self.size_grip.setStyleSheet("width: 20px; height: 20px; background: transparent;")
         self.size_grip.resize(20, 20)
+
+    def mouseMoveEvent(self, event):
+        """배경 패럴랙스 효과를 위해 마우스 위치 전달"""
+        if hasattr(self, "background_animation"):
+            self.background_animation.set_mouse_pos(event.pos())
+        super().mouseMoveEvent(event)
+
+    def trigger_vfx(self, center_widget=None):
+        """충격파 효과 발생 정보"""
+        now = time.monotonic()
+        if now - self._last_vfx_time < 0.15:
+            return
+        self._last_vfx_time = now
+        
+        if hasattr(self, "background_animation"):
+            if center_widget is None and hasattr(self, "accuracy_gauge"):
+                center_widget = self.accuracy_gauge
+            
+            if center_widget:
+                # 위젯이 자체적인 시각적 중앙 좌표 계산 로직을 가진 경우 사용
+                if hasattr(center_widget, "get_vfx_center"):
+                    local_center = center_widget.get_vfx_center()
+                else:
+                    local_center = center_widget.rect().center()
+                
+                # 로컬 중앙 지점을 메인 윈도우 좌표로 변환
+                global_pos = center_widget.mapTo(self, local_center)
+                pos = QPointF(global_pos)
+            else:
+                pos = QPointF(self.width()/2, self.height()*0.55)
+                
+            self.background_animation.trigger_shockwave(pos)
+
+    def on_landmarks_detected(self, landmarks, handedness):
+        """랜드마크 감지 시 홀로그래픽 락온 효과"""
+        if landmarks:
+            self.webcam_panel.set_locking(True)
+        else:
+            self.webcam_panel.set_locking(False)
 
     def open_settings(self):
         play_ui_click()

@@ -17,6 +17,8 @@ class AuroraGradientBackground(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
         
         self.anim_frame = 0.0
+        self.mouse_pos = QPoint(parent.width()//2, parent.height()//2) if parent else QPoint(640, 360)
+        self.target_mouse_pos = self.mouse_pos
         
         # 1. 오로라 블롭 설정
         self.blobs = [
@@ -42,11 +44,31 @@ class AuroraGradientBackground(QWidget):
 
         # 4. 스캔 펄스 위치
         self.pulse_pos = -0.5
+        
+        # 5. 쇼크웨이브 리스트
+        self.shockwaves = []
 
         # 애니메이션 타이머
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_frame)
         self.timer.start(16) # ~60 FPS
+
+    def set_mouse_pos(self, pos: QPoint):
+        self.target_mouse_pos = pos
+
+    def trigger_shockwave(self, center: QPointF = None):
+        """가속/감지 시 충격파 발생 (트리플 웨이브)"""
+        if center is None:
+            center = QPointF(self.width()/2, self.height() * 0.7)
+        
+        # 3개의 충격파를 시간차를 두고 생성 (초기 반지름 오프셋으로 시뮬레이션)
+        for i in range(3):
+            self.shockwaves.append({
+                'center': center,
+                'radius': -i * 30.0, # 시간차 효과
+                'opacity': 1.0,
+                'speed': 12.0
+            })
 
     def _create_noise_texture(self, w, h):
         img = QImage(w, h, QImage.Format.Format_ARGB32)
@@ -76,6 +98,18 @@ class AuroraGradientBackground(QWidget):
         self.pulse_pos += 0.002
         if self.pulse_pos > 1.5: self.pulse_pos = -0.5
                 
+        # 마우스 스무딩
+        dx = (self.target_mouse_pos.x() - self.mouse_pos.x()) * 0.05
+        dy = (self.target_mouse_pos.y() - self.mouse_pos.y()) * 0.05
+        self.mouse_pos = QPoint(int(self.mouse_pos.x() + dx), int(self.mouse_pos.y() + dy))
+
+        # 쇼크웨이브 업데이트
+        for s in self.shockwaves[:]:
+            s['radius'] += s['speed']
+            s['opacity'] -= 0.02
+            if s['opacity'] <= 0:
+                self.shockwaves.remove(s)
+                
         self.update()
 
     def paintEvent(self, event):
@@ -89,8 +123,12 @@ class AuroraGradientBackground(QWidget):
         # 2. 오로라 블롭 그리기 (스크린 합성 모드)
         painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Screen)
         for b in self.blobs:
-            cx = w/2 + math.sin(b['x_phase']) * (w/3)
-            cy = h/2 + math.cos(b['y_phase']) * (h/3)
+            # 패럴랙스 오프셋 적용
+            off_x = (self.mouse_pos.x() - w/2) * 0.05 * b['r_mult']
+            off_y = (self.mouse_pos.y() - h/2) * 0.05 * b['r_mult']
+            
+            cx = w/2 + math.sin(b['x_phase']) * (w/3) + off_x
+            cy = h/2 + math.cos(b['y_phase']) * (h/3) + off_y
             radius = min(w, h) * b['r_mult']
             
             grad = QRadialGradient(QPointF(cx, cy), radius)
@@ -109,11 +147,27 @@ class AuroraGradientBackground(QWidget):
 
         # 4. HUD 디테일 오버레이
         self._draw_hud_details(painter, w, h)
+        
+        # 5. 쇼크웨이브 그리기
+        self._draw_shockwaves(painter)
+
+    def _draw_shockwaves(self, painter):
+        for s in self.shockwaves:
+            if s['radius'] > 0:
+                color = QColor(0, 255, 255, int(255 * s['opacity']))
+                pen = QPen(color, 6) # 두께 강화
+                painter.setPen(pen)
+                painter.setBrush(Qt.BrushStyle.NoBrush)
+                painter.drawEllipse(s['center'], s['radius'], s['radius'])
 
     def _draw_hud_details(self, painter, w, h):
+        # 패럴랙스 HUD 오프셋
+        hud_off_x = (self.mouse_pos.x() - w/2) * 0.02
+        hud_off_y = (self.mouse_pos.y() - h/2) * 0.02
+
         # DNA 헬릭스 (측면 프레임)
-        self._draw_dna_helix(painter, 100, h//2, h-300)
-        self._draw_dna_helix(painter, w-100, h//2, h-300)
+        self._draw_dna_helix(painter, 100 + hud_off_x, h//2 + hud_off_y, h-300)
+        self._draw_dna_helix(painter, w-100 + hud_off_x, h//2 + hud_off_y, h-300)
         
         # 스캔 펄스 효과
         center_x = self.pulse_pos * (w + h)
