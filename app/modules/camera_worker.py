@@ -8,7 +8,7 @@ from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtGui import QImage
 
 import config
-from app.recognition.trigger import HAND_CONNECTIONS, _draw_landmarks_on_frame
+from app.detectors.trigger import HAND_CONNECTIONS, _draw_landmarks_on_frame
 
 
 class CameraWorker(QThread):

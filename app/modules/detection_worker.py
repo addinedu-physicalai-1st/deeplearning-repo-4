@@ -11,7 +11,7 @@ from typing import Callable, Optional
 from PyQt6.QtCore import QThread, pyqtSignal
 
 import config
-from app.recognition.registry import get_mode_detector
+from app.detectors.registry import get_mode_detector
 
 
 class ModeDetectionWorker(QThread):

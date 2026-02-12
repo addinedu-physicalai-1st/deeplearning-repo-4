@@ -20,7 +20,7 @@ from app.widgets import LogoWidget, WebcamPanelWidget, ControlPanelWidget
 from app.widgets.animated_background import AuroraGradientBackground
 from app.widgets.accuracy_gauge import AccuracyGauge
 from app.widgets.gesture_display import GestureDisplayWidget
-from app.workers.sound_worker import play_ui_click
+from app.modules.sound_worker import play_ui_click
 
 
 class SettingsDialog(QDialog):

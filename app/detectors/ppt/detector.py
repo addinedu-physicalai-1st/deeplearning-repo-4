@@ -6,7 +6,7 @@ app/models/의 lstm_legacy(tflite/h5) 사용. Swipe_Left/Right: 이전/다음 �
 from typing import Callable, Optional
 
 import config
-from app.recognition.lstm_gesture_base import LstmGestureBase
+from app.detectors.lstm_gesture_base import LstmGestureBase
 
 
 class PPTDetector:

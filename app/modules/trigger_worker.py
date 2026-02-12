@@ -6,7 +6,7 @@ import queue
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtGui import QImage
 
-from app.recognition.trigger import PostureTriggerDetector, TriggerResult
+from app.detectors.trigger import PostureTriggerDetector, TriggerResult
 
 
 class TriggerWorker(QThread):

@@ -8,10 +8,8 @@ from PyQt6.QtGui import QPixmap
 
 import config
 from app.main_window import MainWindow
-from app.capture import CameraWorker
-from app.mode_controller import ModeController
-from app.recognition import TriggerWorker, ModeDetectionWorker
-from app.workers import (
+from app.modules import CameraWorker, ModeController, TriggerWorker, ModeDetectionWorker
+from app.modules import (
     play_trigger_start,
     play_trigger_stop,
     play_mode_sound,

@@ -1,5 +1,5 @@
 """
-Mode Controller — 현재 모드·감지 on/off 단일 소스, 제스처 → pynput 출력.
+Stage Manager — 현재 모드·감지 on/off 단일 소스, 제스처 → pynput 출력.
 """
 
 import time

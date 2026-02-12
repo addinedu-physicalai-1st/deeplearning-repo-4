@@ -2,9 +2,9 @@
 
 from typing import Callable, Optional
 
-from app.recognition.ppt import PPTDetector
-from app.recognition.youtube import YouTubeDetector
-from app.recognition.game import GameDetector
+from app.detectors.ppt import PPTDetector
+from app.detectors.youtube import YouTubeDetector
+from app.detectors.game import GameDetector
 
 
 def get_mode_detector(

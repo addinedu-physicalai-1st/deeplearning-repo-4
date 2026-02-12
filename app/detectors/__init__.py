@@ -5,11 +5,11 @@
 - ppt / youtube / game: 모드별 제스처·자세 감지
 """
 
-from app.recognition.trigger import PostureTriggerDetector, TriggerResult
-from app.recognition.ppt import PPTDetector
-from app.recognition.youtube import YouTubeDetector
-from app.recognition.game import GameDetector
-from app.recognition.registry import get_mode_detector
+from app.detectors.trigger import PostureTriggerDetector, TriggerResult
+from app.detectors.ppt import PPTDetector
+from app.detectors.youtube import YouTubeDetector
+from app.detectors.game import GameDetector
+from app.detectors.registry import get_mode_detector
 
 def __getattr__(name):
     if name == "TriggerWorker":

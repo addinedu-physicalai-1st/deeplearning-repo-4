@@ -8,7 +8,7 @@ app/models/의 lstm_legacy.tflite 사용. LSTM 6종 제스처 (Pinch 좌/우 분
 from typing import Callable, Optional
 
 import config
-from app.recognition.lstm_gesture_base import LstmGestureBase
+from app.detectors.lstm_gesture_base import LstmGestureBase
 
 
 class YouTubeDetector:

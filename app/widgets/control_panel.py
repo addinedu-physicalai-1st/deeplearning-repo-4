@@ -7,7 +7,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, QEvent, QTimer, QPoint, QPropertyAnimat
 from PyQt6.QtGui import QColor, QFont, QAction, QPainter, QPen
 
 import config
-from app.workers.sound_worker import play_ui_click
+from app.modules.sound_worker import play_ui_click
 
 class MorphingHamburgerIcon(QWidget):
     def __init__(self, parent=None):
