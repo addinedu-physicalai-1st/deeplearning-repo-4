@@ -6,9 +6,9 @@
 """
 
 from app.detectors.trigger import PostureTriggerDetector, TriggerResult
-from app.detectors.ppt import PPTDetector
-from app.detectors.youtube import YouTubeDetector
-from app.detectors.game import GameDetector
+from app.detectors.ppt.detector import PPTDetector
+from app.detectors.youtube.detector import YouTubeDetector
+from app.detectors.game.detector import GameDetector
 from app.detectors.registry import get_mode_detector
 
 def __getattr__(name):
