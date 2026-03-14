@@ -8,7 +8,7 @@ from PyQt6.QtGui import QPixmap
 
 import config
 from app.main_window import MainWindow
-from app.modules import CameraWorker, ModeController, TriggerWorker, ModeDetectionWorker
+from app.modules import CameraWorker, StateManager, TriggerWorker, DetectionWorker, DeviceController
 from app.modules import (
     play_trigger_start,
     play_trigger_stop,
@@ -35,25 +35,27 @@ def main():
         QFontDatabase.addApplicationFont(font_path)
 
     window = MainWindow()
-    mode_controller = ModeController(initial_mode="PPT")
+    mode_controller = StateManager(initial_mode="PPT")
+    device_controller = DeviceController()
     camera = CameraWorker()
     trigger = TriggerWorker()
-    mode_detection = ModeDetectionWorker(
-        get_current_mode=mode_controller.get_mode,
+    mode_detection = DetectionWorker(
+        current_mode=mode_controller.get_mode(),
         get_sensitivity=lambda: window.sensitivity,
     )
 
     # UI → Mode Controller
-    window.mode_changed.connect(mode_controller.set_mode)
-    window.mode_changed.connect(trigger.set_current_mode) # 트리거 워커에 모드 동기화
-    window.mode_changed.connect(play_mode_sound)
+    window.mode_button_clicked.connect(mode_controller.set_mode)
+    window.mode_button_clicked.connect(play_mode_sound)
+    
+    # Mode Controller → Workers (싱글 소스에서 모드 변경 전파)
+    mode_controller.mode_changed.connect(mode_detection.update_mode)
+    mode_controller.mode_changed.connect(trigger.set_current_mode)
+
     mode_controller.set_mode(window.current_mode)
-    trigger.set_current_mode(window.current_mode)
     
     # 시작/종료 버튼 클릭 → mode_controller 경유
-    window.toggle_detection_requested.connect(
-        lambda: mode_controller.set_detection_state(not mode_controller.get_is_detecting())
-    )
+    window.detection_button_clicked.connect(mode_controller.set_detection_state)
 
     # 카메라 → UI (랜드마크가 그려진 웹캠 표시)
     camera.frame_updated.connect(lambda qimg: window.update_webcam_frame(QPixmap.fromImage(qimg)))
@@ -63,7 +65,7 @@ def main():
 
     # 카메라 → 모드별 감지 (모션 감지 중일 때만 현재 모드 제스처 인식)
     def on_landmarks_extracted(landmarks, handedness):
-        if mode_controller.get_is_detecting():
+        if mode_controller.get_detection_state():
             mode_detection.enqueue_landmarks(landmarks, handedness)
 
     camera.landmarks_updated.connect(on_landmarks_extracted)
@@ -87,19 +89,24 @@ def main():
     mode_controller.detection_state_changed.connect(trigger.set_motion_active)
     mode_controller.detection_state_changed.connect(camera.set_motion_active)
 
-    # 감지 시작/정지 시 효과음
+    # 감지 종료 시 키 Release (Safety)
     def on_detection_state_changed(is_active: bool):
         if is_active:
             play_trigger_start()
         else:
             play_trigger_stop()
+            # 감지 종료 시 눌려있는 키 모두 해제
+            device_controller.release_all()
+
     mode_controller.detection_state_changed.connect(on_detection_state_changed)
 
-    # 모드별 감지 → Mode Controller + UI
-    mode_detection.gesture_detected.connect(mode_controller.on_gesture)
-    mode_detection.gesture_detected.connect(window.update_gesture)
+    # 모드별 감지 → Device Controller (하드웨어 제어)
+    mode_detection.gesture_detected.connect(device_controller.execute_gesture)
+
+    # 모드별 감지 → UI
+    mode_detection.gesture_displayed.connect(window.update_gesture)
     if config.GESTURE_DEBUG:
-        mode_detection.gesture_debug_updated.connect(window.update_gesture_debug)
+        mode_detection.gesture_debugged.connect(window.update_gesture_debug)
 
     # 제스처 인식 성공 시 효과음
     last_played_gesture = [None]
@@ -115,7 +122,7 @@ def main():
         # Wave fires whenever gesture is detected (active)
         window.trigger_vfx()
 
-    mode_detection.gesture_detected.connect(on_gesture_detected)
+    mode_detection.gesture_displayed.connect(on_gesture_detected)
 
     # 카메라 오류
     camera.error_occurred.connect(lambda msg: window.statusBar().showMessage(msg))

@@ -20,7 +20,7 @@ DATA_DIR = os.path.join(_ROOT, "app", "data")
 GAME_URL = "https://ratlabyrinth.netlify.app/"
 
 # 웹캠 설정
-CAMERA_INDEX = 0
+CAMERA_INDEX = "/dev/video32"
 CAMERA_WIDTH = 640
 CAMERA_HEIGHT = 480
 CAMERA_FPS = 30

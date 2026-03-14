@@ -6,10 +6,11 @@ app/models/의 lstm_legacy(tflite/h5) 사용. Swipe_Left/Right: 이전/다음 �
 from typing import Callable, Optional
 
 import config
-from app.detectors.lstm_gesture_base import LstmGestureBase
+from app.detectors.base import Detector
+from app.detectors.lstm_gesture_base import GestureLstmModel
 
 
-class PPTDetector:
+class PPTDetector(Detector):
     """PPT 모드: LSTM으로 Swipe + Pinch(전체화면/종료) 사용."""
 
     _ALLOWED = (
@@ -24,7 +25,7 @@ class PPTDetector:
     )
 
     def __init__(self, get_confidence_threshold: Optional[Callable[[], float]] = None):
-        self._base = LstmGestureBase(
+        self._base = GestureLstmModel(
             get_confidence_threshold=get_confidence_threshold,
             cooldown_sec=config.PPT_COOLDOWN_SEC,
         )

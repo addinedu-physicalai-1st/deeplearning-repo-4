@@ -9,13 +9,14 @@ import os
 import sys
 import time
 from collections import deque
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Dict, List
 
 import cv2
 import numpy as np
 import mediapipe as mp
 
 import config
+from app.detectors.base import Detector
 
 # 프로젝트 루트를 path에 추가 (lib 임포트용)
 _root = os.path.dirname(os.path.abspath(config.__file__))
@@ -79,7 +80,7 @@ def _normalize_landmarks(data: np.ndarray) -> np.ndarray:
     return normalized
 
 
-class LstmGestureBase:
+class GestureLstmModel(Detector):
     """
     lstm_legacy.tflite + mp.solutions.hands (Legacy) 기반 4종 제스처 인식.
     학습 데이터(collect_mp)와 동일한 랜드마크 파이프라인 사용.

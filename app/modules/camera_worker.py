@@ -32,8 +32,8 @@ class CameraWorker(QThread):
         self._hands = self._mp_hands.Hands(
             static_image_mode=False,
             max_num_hands=2,
-            min_detection_confidence=0.7,
-            min_tracking_confidence=0.7,
+            min_detection_confidence=0.9,
+            min_tracking_confidence=0.9,
         )
 
     def set_motion_active(self, active: bool):
@@ -65,7 +65,6 @@ class CameraWorker(QThread):
             self.landmarks_updated.emit(results.multi_hand_landmarks, results.multi_handedness)
 
             # 2. 랜드마크 시각화 (frame_updated용)
-            annotated_frame = frame.copy()
             if results.multi_hand_landmarks:
                 # trigger.py의 _draw_landmarks_on_frame 재사용
                 # 래핑 객체 필요 없이 직접 그리는 로직으로 수정하거나, 
@@ -73,11 +72,11 @@ class CameraWorker(QThread):
                 from types import SimpleNamespace
                 draw_res = SimpleNamespace()
                 draw_res.hand_landmarks = [h.landmark for h in results.multi_hand_landmarks]
-                _draw_landmarks_on_frame(annotated_frame, draw_res, self._motion_active)
+                _draw_landmarks_on_frame(frame, draw_res, self._motion_active)
 
-            h, w, ch = annotated_frame.shape
+            h, w, ch = frame.shape
             bytes_per_line = ch * w
-            qt_image = QImage(annotated_frame.data, w, h, bytes_per_line, QImage.Format.Format_BGR888)
+            qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format.Format_BGR888)
             self.frame_updated.emit(qt_image.copy())
 
         self._release()

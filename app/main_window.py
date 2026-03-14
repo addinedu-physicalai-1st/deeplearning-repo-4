@@ -526,11 +526,14 @@ class CustomTopBar(QWidget):
         self.aot_container.setVisible(enabled)
             
 class MainWindow(QMainWindow):
-    start_detection = pyqtSignal()
-    stop_detection = pyqtSignal()
+    # start_detection = pyqtSignal()
+    # stop_detection = pyqtSignal()
+    mode_button_clicked = pyqtSignal(str)
+    detection_button_clicked = pyqtSignal(bool)
+    
     sensitivity_changed = pyqtSignal(int)
-    mode_changed = pyqtSignal(str)
-    toggle_detection_requested = pyqtSignal()
+    # mode_changed = pyqtSignal(str)
+    # toggle_detection_requested = pyqtSignal()
     camera_source_changed = pyqtSignal(int)
 
     def __init__(self):
@@ -1103,12 +1106,15 @@ class MainWindow(QMainWindow):
             self.top_bar.update_gesture("대기 중")
         
         if is_active:
-            self.start_detection.emit()
+            # self.start_detection.emit()
+            pass
         else:
-            self.stop_detection.emit()
+            # self.stop_detection.emit()
+            pass
 
     def on_toggle_clicked(self):
-        self.toggle_detection_requested.emit()
+        new_state = not self.is_detecting
+        self.detection_button_clicked.emit(new_state)
 
     def on_sensitivity_changed(self, value: int):
         self.sensitivity = value
@@ -1120,7 +1126,7 @@ class MainWindow(QMainWindow):
 
     def on_mode_changed(self, mode: str):
         self.current_mode = mode
-        self.mode_changed.emit(mode)
+        self.mode_button_clicked.emit(mode)
         
         # Sync Control Panel Label
         if hasattr(self, 'control_panel'):

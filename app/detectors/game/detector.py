@@ -13,10 +13,12 @@ Game 모드 전용 감지.
 
 import math
 from types import SimpleNamespace
-from typing import Optional
+from typing import Optional, Dict, List, Any
 
 import cv2
 import mediapipe as mp
+
+from app.detectors.base import Detector
 
 # 랜드마크 인덱스 (trigger.py와 동일)
 WRIST = 0
@@ -155,7 +157,7 @@ def _hand_label_from_result(result, index: int) -> str:
     return str(index)
 
 
-class GameDetector:
+class GameDetector(Detector):
     """Game 모드: 검지 포인팅으로 직진/후진/좌회전/우회전 방향 감지."""
 
     def __init__(self):
@@ -213,9 +215,24 @@ class GameDetector:
         return None, 0.0
 
     @property
-    def last_probs(self) -> dict:
+    def last_probs(self) -> Dict[str, float]:
         """Game 모드는 LSTM 미사용. UI 호환용 빈 dict."""
         return {}
+
+    @property
+    def cooldown_until(self) -> float:
+        """Game 모드는 별도 쿨다운 없음."""
+        return 0.0
+
+    @property
+    def last_11ch_means(self) -> Optional[List[float]]:
+        """Game 모드는 11채널 미사용."""
+        return None
+
+    @property
+    def last_fist_debug(self) -> Any:
+        """Game 모드는 주먹 디버그 미사용."""
+        return None
 
     def close(self) -> None:
         pass

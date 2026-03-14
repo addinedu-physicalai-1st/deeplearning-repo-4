@@ -8,14 +8,15 @@ app/models/의 lstm_legacy.tflite 사용. LSTM 6종 제스처 (Pinch 좌/우 분
 from typing import Callable, Optional
 
 import config
-from app.detectors.lstm_gesture_base import LstmGestureBase
+from app.detectors.base import Detector
+from app.detectors.lstm_gesture_base import GestureLstmModel
 
 
-class YouTubeDetector:
+class YouTubeDetector(Detector):
     """YouTube 모드: LSTM 6종 제스처 (Pinch 좌/우 분리) — 10초 앞/뒤, 재생·정지, 음소거."""
 
     def __init__(self, get_confidence_threshold: Optional[Callable[[], float]] = None):
-        self._base = LstmGestureBase(
+        self._base = GestureLstmModel(
             get_confidence_threshold=get_confidence_threshold,
             cooldown_sec=config.YOUTUBE_COOLDOWN_SEC,
         )

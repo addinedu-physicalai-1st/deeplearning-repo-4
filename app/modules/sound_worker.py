@@ -39,7 +39,7 @@ def start_playback_worker() -> None:
     global _worker
     if _worker is not None:
         return
-    _worker = SoundPlaybackWorker()
+    _worker = SoundWorker()
     _worker.start()
 
 
@@ -180,7 +180,7 @@ def _play_subprocess(path: str, volume: float = 1.0) -> None:
             pass
 
 
-class SoundPlaybackWorker(QThread):
+class SoundWorker(QThread):
     """효과음 재생 QThread. 경로 큐를 받아 워커 스레드에서 _play_subprocess 호출."""
 
     def __init__(self, parent=None):

@@ -11,27 +11,33 @@ from typing import Callable, Optional
 from PyQt6.QtCore import QThread, pyqtSignal
 
 import config
+from app.detectors.base import Detector
 from app.detectors.registry import get_mode_detector
 
 
-class ModeDetectionWorker(QThread):
+class DetectionWorker(QThread):
     """모션 감지 중일 때만 프레임을 받아, 현재 모드 감지기로 제스처/자세 판별. gesture_detected 시그널."""
 
-    gesture_detected = pyqtSignal(str, float, float)
-    gesture_debug_updated = pyqtSignal(dict, float, object, object)  # probs, thr, channels_11, fist_debug
+    gesture_displayed = pyqtSignal(str, float, float)
+    gesture_detected = pyqtSignal(str, str)  # (gesture_name, mode)
+    gesture_debugged = pyqtSignal(dict, float, object, object)  # probs, thr, channels_11, fist_debug
 
     def __init__(
         self,
-        get_current_mode: Callable[[], str],
+        current_mode: str = "GAME",
         get_sensitivity: Optional[Callable[[], int]] = None,
         parent=None,
     ):
         super().__init__(parent)
-        self._get_current_mode = get_current_mode
+        self._current_mode = current_mode
         self._get_sensitivity = get_sensitivity
         self._landmarks_queue = queue.Queue(maxsize=1)
         self._running = True
-        self._detector = None
+        self._detector: Optional[Detector] = None
+
+    def update_mode(self, mode: str) -> None:
+        """StateManager의 mode_changed 시그널과 연결되어 현재 모드 갱신."""
+        self._current_mode = mode
 
     def enqueue_landmarks(self, landmarks, handedness) -> None:
         """카메라 스레드에서 호출. 모션 감지 중일 때만 호출. 최신 랜드마크만 유지."""
@@ -58,7 +64,7 @@ class ModeDetectionWorker(QThread):
                 break
             
             landmarks, handedness = item
-            mode = self._get_current_mode()
+            mode = self._current_mode
             if mode != last_mode:
                 if self._detector is not None:
                     self._detector.close()
@@ -78,19 +84,21 @@ class ModeDetectionWorker(QThread):
                 else:
                     gesture, confidence = result, 0.0
                 
-                cooldown_until = getattr(self._detector, "cooldown_until", 0.0)
-                self.gesture_detected.emit(gesture or "", confidence, cooldown_until)
+                gesture, confidence = result if isinstance(result, tuple) else (result, 0.0)
+                
+                self.gesture_displayed.emit(gesture or "", confidence, self._detector.cooldown_until)
+                self.gesture_detected.emit(gesture or "", mode)
                 
                 if config.GESTURE_DEBUG:
-                    probs = getattr(self._detector, "last_probs", None) or {}
+                    probs = self._detector.last_probs
                     thr = (
                         config.sensitivity_to_confidence_threshold(self._get_sensitivity())
                         if self._get_sensitivity is not None
                         else 0.0
                     )
-                    channels_11 = getattr(self._detector, "last_11ch_means", None)
-                    fist_debug = getattr(self._detector, "last_fist_debug", None)
-                    self.gesture_debug_updated.emit(probs, thr, channels_11, fist_debug)
+                    channels_11 = self._detector.last_11ch_means
+                    fist_debug = self._detector.last_fist_debug
+                    self.gesture_debugged.emit(probs, thr, channels_11, fist_debug)
                     
         if self._detector is not None:
             self._detector.close()
